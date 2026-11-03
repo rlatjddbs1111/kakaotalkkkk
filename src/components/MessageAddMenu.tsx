@@ -24,7 +24,7 @@ function AddMenuGlyph({ name }: { name: string }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={paths[name] ?? ''} /></svg>
 }
 
-export function MessageAddMenu({ onClose }: { onClose: () => void }) {
+export function MessageAddMenu({ onClose, onOpenRegistration }: { onClose: () => void; onOpenRegistration: () => void }) {
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function MessageAddMenu({ onClose }: { onClose: () => void }) {
           <button type="button" className="message-add-link">사진 추가 ›</button>
           <div className="message-add-primary-actions">
             <div><PrimaryMenuIcon name="photo" /><span>사진</span></div>
-            <div><PrimaryMenuIcon name="reserve" /><span>일정</span></div>
+            <button type="button" onClick={onOpenRegistration}><PrimaryMenuIcon name="reserve" /><span>일정</span></button>
           </div>
           {menuGroups.map((group, groupIndex) => (
             <div className="message-add-group" key={groupIndex}>

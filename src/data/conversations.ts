@@ -44,6 +44,7 @@ export const conversations: Record<string, Conversation> = {
       { number: 3, sender: '점장', text: '다음 주 수요일 야간 대타 가능하신 분 있나요?', timestamp: '오후 1:28' },
       { number: 4, sender: '알바생A', text: '저 수요일에 수업 있어서 힘들 것 같습니다 ㅠㅠ', timestamp: '오후 1:29' },
       { number: 5, sender: '점장', text: '수요일 스케줄 변경하실 분 연락주세요. 매장 대기실 청소도 부탁합니다.', timestamp: '오후 1:30' },
+      { number: 6, sender: '점장', text: '대타 다시 구했습니다. 이제 괜찮습니다.', timestamp: '오후 1:35' },
     ],
   },
   room_3: {
@@ -61,7 +62,6 @@ export const conversations: Record<string, Conversation> = {
       { number: 2, sender: '정수진', text: '아직 시작도 못함 ㅋㅋㅋ 솔루션 있는 사람?', timestamp: '오후 6:05' },
       { number: 3, sender: '박민수', text: '이번 주 금요일 족보 가지고 계신 분 계신가요?', timestamp: '오후 6:10' },
       { number: 4, sender: '박민수', text: '이산수학 4장 솔루션 구합니다 ㅠㅠ', timestamp: '오후 6:11' },
-      { number: 5, sender: '최동현', text: '단톡방 공지 확인하고 회식 참석 여부 투표하셈', timestamp: '오후 6:15' },
     ],
   },
   room_5: {
@@ -75,9 +75,18 @@ export const conversations: Record<string, Conversation> = {
   room_6: {
     dateLabel: '10월 24일',
     messages: [
-      { number: 1, sender: '엄마', text: '성윤아 오늘 몇 시에 들어오니?', timestamp: '오후 5:10' },
+      { number: 1, sender: '엄마', text: '아들 오늘 몇 시에 들어오니?', timestamp: '오후 5:10' },
       { number: 2, sender: '김성윤', text: '저 알바 끝나고 10시쯤 들어갈 것 같아요.', timestamp: '오후 5:12', isMine: true },
-      { number: 3, sender: '엄마', text: '들어올 때 두부랑 우유 사가지고 들어와~ 사골국 끓여놨다.', timestamp: '오후 5:15' },
+      { number: 3, sender: '엄마', text: '아들 조심히 와.', timestamp: '오후 5:15' },
+    ],
+  },
+  room_0: {
+    dateLabel: '오늘',
+    messages: [
+      { number: 1, sender: '윤진효', text: '오늘 수업 몇 시에 끝남?' },
+      { number: 2, sender: '참가자', text: '4시', isMine: true },
+      { number: 3, sender: '윤진효', text: 'ㅇㅇ 밥?' },
+      { number: 4, sender: '참가자', text: 'ㄱㄱ', isMine: true },
     ],
   },
 }

@@ -162,6 +162,7 @@
 }
 
 .message-add-primary-actions > div,
+.message-add-primary-actions > button,
 .message-add-item {
   display: flex;
   height: 58px;
@@ -171,6 +172,15 @@
   padding: 0 22px;
   font-size: 19px;
   letter-spacing: -0.55px;
+}
+
+.message-add-primary-actions > button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .message-add-group .message-add-item {
@@ -192,7 +202,7 @@
 }
 
 .message-add-primary-actions > div:first-child svg { color: #43aa68; }
-.message-add-primary-actions > div:last-child svg { color: #4f8ff5; }
+.message-add-primary-actions > button svg { color: #4f8ff5; }
 
 .message-add-icon {
   display: grid;

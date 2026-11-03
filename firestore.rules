@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /participants/{uid}/sessions/{sessionId} {
+      allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+      allow create: if isOwner(uid) && request.resource.data.ownerUid == uid;
+      allow update: if isOwner(uid)
+        && resource.data.ownerUid == uid
+        && request.resource.data.ownerUid == uid;
+      allow delete: if false;
+
+      match /taskResults/{taskAttemptId} {
+        allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+        allow create: if isOwner(uid) && request.resource.data.ownerUid == uid;
+        allow update: if isOwner(uid)
+          && resource.data.ownerUid == uid
+          && request.resource.data.ownerUid == uid;
+        allow delete: if false;
+      }
+
+      match /events/{eventId} {
+        allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+        allow create: if isOwner(uid) && request.resource.data.ownerUid == uid;
+        allow update: if isOwner(uid)
+          && resource.data.ownerUid == uid
+          && request.resource.data.ownerUid == uid;
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

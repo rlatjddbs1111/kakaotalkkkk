@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChatRoomView, MessageComposer } from './components/ChatRoomView'
 import { ChatRoomDrawer } from './components/ChatRoomDrawer'
 import { MessageAddMenu } from './components/MessageAddMenu'
 import { SearchView, type SearchHit } from './components/SearchView'
 import { NoticeDetailView } from './components/NoticeDetailView'
+import { RegistrationFlow } from './components/RegistrationFlow'
+import { ExperimentFlow, TaskControls, useExperiment } from './components/ExperimentFlow'
 import { chatRooms, type ChatRoomListItem } from './data/chatRooms'
+import { readRegisteredItems, writeRegisteredItems, type RegisteredItem } from './data/registeredItems'
+import { createExperimentRooms, getTaskConversationMap, getTaskRoom, getExperimentRoomId } from './data/experimentTasks'
+import { conversations, type Conversation } from './data/conversations'
 import './styles/chat-room.css'
 import './styles/message-add-menu.css'
 import './styles/search.css'
 import './styles/notice-detail.css'
+import './styles/registration.css'
+import './styles/experiment.css'
 
 function SearchIcon() {
   return (
@@ -124,7 +131,7 @@ function StatusBar({ time = '7:50', isChat = false }: { time?: string; isChat?: 
   )
 }
 
-function ChatList({ onOpenRoom }: { onOpenRoom: (room: ChatRoomListItem) => void }) {
+function ChatList({ onOpenRoom, rooms = chatRooms }: { onOpenRoom: (room: ChatRoomListItem) => void; rooms?: ChatRoomListItem[] }) {
   return (
     <div className="chat-list-page">
       <header className="chat-list-header">
@@ -139,7 +146,7 @@ function ChatList({ onOpenRoom }: { onOpenRoom: (room: ChatRoomListItem) => void
       <div className="chat-filters" aria-label="채팅 목록 보기">
         <span className="filter-chip is-selected">전체</span>
         <span className="filter-chip unread-filter">
-          안읽음 <span className="filter-unread-count">{chatRooms.reduce((total, room) => total + room.unreadCount, 0)}</span>
+          안읽음 <span className="filter-unread-count">{rooms.reduce((total, room) => total + room.unreadCount, 0)}</span>
         </span>
         <span className="filter-chip">ChatGPT</span>
         <span className="filter-chip">통화</span>
@@ -160,7 +167,7 @@ function ChatList({ onOpenRoom }: { onOpenRoom: (room: ChatRoomListItem) => void
       </aside>
 
       <section className="chat-room-list" aria-label="채팅방 목록">
-        {chatRooms.map((room) => (
+        {rooms.map((room) => (
           <button
             className="chat-room-row"
             key={room.id}
@@ -190,8 +197,8 @@ function ChatList({ onOpenRoom }: { onOpenRoom: (room: ChatRoomListItem) => void
   )
 }
 
-function BottomNavigation() {
-  const unreadTotal = chatRooms.reduce((total, room) => total + room.unreadCount, 0)
+function BottomNavigation({ rooms = chatRooms }: { rooms?: ChatRoomListItem[] }) {
+  const unreadTotal = rooms.reduce((total, room) => total + room.unreadCount, 0)
 
   return (
     <nav className="bottom-navigation" aria-label="하단 메뉴">
@@ -208,18 +215,79 @@ function BottomNavigation() {
 }
 
 export default function App() {
-  const [selectedRoom, setSelectedRoom] = useState<ChatRoomListItem | null>(null)
+  return <ExperimentFlow><ChatApplication /></ExperimentFlow>
+}
+
+function ChatApplication() {
+  const experiment = useExperiment()
+  const { session, taskId } = experiment
+  const experimentRooms = createExperimentRooms(taskId)
+  const rawConversationMap: Record<string, Conversation> = session ? getTaskConversationMap(taskId, session) : conversations
+  const visibleMessageCount = taskId === 'task_2' && experiment.attempt
+    ? Math.min(conversations.room_1.messages.length, Math.floor(Math.max(0, Date.now() - Date.parse(experiment.attempt.startTime)) / 400))
+    : undefined
+  const conversationMap: Record<string, Conversation> = taskId === 'task_2'
+    ? { ...rawConversationMap, room_1: { ...rawConversationMap.room_1, messages: rawConversationMap.room_1.messages.slice(0, visibleMessageCount) } }
+    : rawConversationMap
+  const scopedRegistrationRoomId = session ? `${getExperimentRoomId(taskId)}::${session.sessionId}` : undefined
+  const [selectedRoom, setSelectedRoom] = useState<ChatRoomListItem | null>(() => {
+    if (session?.currentAttempt && taskId !== 'task_1') return getTaskRoom(taskId, getExperimentRoomId(taskId)) ?? null
+    return null
+  })
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNoticeOpen, setIsNoticeOpen] = useState(false)
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false)
+  const [registrationInitialKind, setRegistrationInitialKind] = useState<'schedule' | 'todo' | null>(null)
+  const [registrationPath, setRegistrationPath] = useState<'plus' | 'drawer'>('plus')
+  const [registeredItems, setRegisteredItems] = useState<RegisteredItem[]>(readRegisteredItems)
+  const task2SubmissionLock = useRef(false)
+  const [initialDrawerSection, setInitialDrawerSection] = useState<'schedule' | 'todo' | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [targetMessageNumber, setTargetMessageNumber] = useState<number | null>(null)
   const [targetQuery, setTargetQuery] = useState('')
-  const unreadTotal = chatRooms.reduce((total, room) => total + room.unreadCount, 0)
+  const unreadTotal = experimentRooms.reduce((total, room) => total + room.unreadCount, 0)
+
+  useEffect(() => { writeRegisteredItems(registeredItems) }, [registeredItems])
+
+  function saveRegisteredItem(item: RegisteredItem) {
+    const scopedItem = taskId === 'task_2' && scopedRegistrationRoomId ? { ...item, roomId: scopedRegistrationRoomId } : item
+    if (taskId === 'task_2') {
+      if (task2SubmissionLock.current) return false
+      task2SubmissionLock.current = true
+      if (scopedItem.kind === 'schedule' && !experiment.isTask2ScheduleCorrect(scopedItem)) {
+        experiment.recordIncorrectTask2Schedule(scopedItem, registrationPath)
+        task2SubmissionLock.current = false
+        return false
+      }
+      if (scopedItem.kind !== 'schedule') {
+        experiment.recordIncorrectTask2Type()
+        task2SubmissionLock.current = false
+        return false
+      }
+      writeRegisteredItems([...registeredItems.filter((existing) => existing.id !== scopedItem.id), scopedItem])
+      setRegisteredItems((current) => current.some((existing) => existing.id === scopedItem.id) ? current : [...current, scopedItem])
+      experiment.completeTask2Schedule(scopedItem, registrationPath)
+      setIsRegistrationOpen(false)
+      setRegistrationInitialKind(null)
+      setIsAddMenuOpen(false)
+      return true
+    }
+    setRegisteredItems((current) => current.some((existing) => existing.id === scopedItem.id) ? current : [...current, scopedItem])
+    setIsRegistrationOpen(false)
+    setRegistrationInitialKind(null)
+    setIsAddMenuOpen(false)
+    setInitialDrawerSection(item.kind)
+    setIsDrawerOpen(true)
+  }
+
+  function updateRegisteredItem(updated: RegisteredItem) {
+    setRegisteredItems((current) => current.map((item) => item.id === updated.id ? updated : item))
+  }
 
   function openSearchHit(hit: SearchHit) {
-    const room = chatRooms.find((item) => item.id === hit.roomId)
+    const room = getTaskRoom(taskId, hit.roomId)
     if (!room) return
     const matchIndex = hit.message.text.toLocaleLowerCase().indexOf(searchTerm.trim().toLocaleLowerCase())
     setIsSearchOpen(false)
@@ -227,6 +295,7 @@ export default function App() {
     setSelectedRoom(room)
     setTargetMessageNumber(hit.message.number)
     setTargetQuery(searchTerm.trim() ? hit.message.text.slice(matchIndex, matchIndex + searchTerm.trim().length) : '')
+    if (taskId === 'task_3') experiment.selectSearchHit(hit.roomId, hit.message.number, searchTerm)
   }
 
   return (
@@ -235,7 +304,17 @@ export default function App() {
         <StatusBar time={selectedRoom ? '7:52' : '7:50'} isChat={Boolean(selectedRoom) && !isDrawerOpen} />
         <section className={`app-content${selectedRoom ? ' chat-app-content' : ''}${isDrawerOpen ? ' drawer-app-content' : ''}`}>
           {selectedRoom && isDrawerOpen ? (
-            <ChatRoomDrawer room={selectedRoom} onBack={() => setIsDrawerOpen(false)} />
+            <ChatRoomDrawer
+              room={selectedRoom}
+              items={taskId === 'task_2' ? registeredItems : []}
+              itemsRoomId={scopedRegistrationRoomId}
+              conversationOverride={conversationMap[selectedRoom.id]}
+              initialSection={initialDrawerSection}
+              onInitialSectionHandled={() => setInitialDrawerSection(null)}
+              onUpdateItem={updateRegisteredItem}
+              onCreateSchedule={() => { setRegistrationPath('drawer'); setRegistrationInitialKind('schedule'); setIsRegistrationOpen(true) }}
+              onBack={() => setIsDrawerOpen(false)}
+            />
           ) : selectedRoom ? (
             <ChatRoomView
               room={selectedRoom}
@@ -246,18 +325,22 @@ export default function App() {
               onOpenNotice={() => { setIsAddMenuOpen(false); setIsSearchOpen(false); setIsNoticeOpen(true) }}
               targetMessageNumber={targetMessageNumber}
               targetQuery={targetQuery}
+              conversationOverride={conversationMap[selectedRoom.id]}
+              participantName={session.participantName}
             />
           ) : (
-            <ChatList onOpenRoom={setSelectedRoom} />
+            <ChatList rooms={experimentRooms} onOpenRoom={(room) => { experiment.visitRoom(room.id); setSelectedRoom(room) }} />
           )}
         </section>
-        {selectedRoom && !isDrawerOpen && !isNoticeOpen ? <MessageComposer onOpenAdd={() => setIsAddMenuOpen(true)} /> : !selectedRoom ? <BottomNavigation /> : null}
+        <TaskControls taskId={taskId} selectedRoomId={selectedRoom?.id} onAbandon={experiment.openAbandonDialog} onWrongRoom={() => setSelectedRoom(null)} />
+        {selectedRoom && !isDrawerOpen && !isNoticeOpen ? <MessageComposer onOpenAdd={() => setIsAddMenuOpen(true)} /> : !selectedRoom ? <BottomNavigation rooms={experimentRooms} /> : null}
         <div className="system-bottom-space" aria-hidden="true">
           <span className="home-indicator" />
         </div>
-        {selectedRoom && !isDrawerOpen && !isNoticeOpen && isAddMenuOpen && <MessageAddMenu onClose={() => setIsAddMenuOpen(false)} />}
-        {selectedRoom && !isDrawerOpen && !isNoticeOpen && isSearchOpen && <SearchView onCancel={() => { setIsSearchOpen(false); setSearchTerm('') }} onQueryChange={setSearchTerm} onSelect={openSearchHit} />}
+        {selectedRoom && !isDrawerOpen && !isNoticeOpen && isAddMenuOpen && <MessageAddMenu onClose={() => setIsAddMenuOpen(false)} onOpenRegistration={() => { setRegistrationPath('plus'); setRegistrationInitialKind(taskId === 'task_2' ? 'schedule' : null); setIsAddMenuOpen(false); setIsRegistrationOpen(true) }} />}
+        {selectedRoom && !isDrawerOpen && !isNoticeOpen && isSearchOpen && <SearchView rooms={experimentRooms} conversationData={conversationMap} onCancel={() => { setIsSearchOpen(false); setSearchTerm('') }} onQueryChange={setSearchTerm} onSearchSubmit={experiment.recordSearchQuery} onSelect={openSearchHit} />}
         {selectedRoom && !isDrawerOpen && isNoticeOpen && <NoticeDetailView room={selectedRoom} onBack={() => setIsNoticeOpen(false)} />}
+        {selectedRoom && isRegistrationOpen && <RegistrationFlow roomId={taskId === 'task_2' ? scopedRegistrationRoomId ?? selectedRoom.id : selectedRoom.id} initialKind={registrationInitialKind} onClose={() => { setIsRegistrationOpen(false); setRegistrationInitialKind(null) }} onSave={saveRegisteredItem} />}
       </div>
     </main>
   )

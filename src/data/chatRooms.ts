@@ -21,8 +21,8 @@ export const chatRooms: ChatRoomListItem[] = [
   {
     id: 'room_2',
     name: '컴포즈 알바 공지방',
-    lastMessage: '수요일 스케줄 변경하실 분 연락주세요. 매장 대기실 청소도 부탁합니다.',
-    lastMessageTime: '오후 1:30',
+    lastMessage: '대타 다시 구했습니다. 이제 괜찮습니다.',
+    lastMessageTime: '오후 1:35',
     unreadCount: 1,
     noticeTitle: '11월 근무 스케줄표 및 수요일 대타 확인 건',
   },
@@ -37,8 +37,8 @@ export const chatRooms: ChatRoomListItem[] = [
   {
     id: 'room_4',
     name: '산업공학과 23학번',
-    lastMessage: '단톡방 공지 확인하고 회식 참석 여부 투표하셈',
-    lastMessageTime: '어제 오후 6:15',
+    lastMessage: '이산수학 4장 솔루션 구합니다 ㅠㅠ',
+    lastMessageTime: '어제 오후 6:11',
     unreadCount: 5,
     noticeTitle: '중간고사 족보 공유 및 단체 회식 공지',
   },
@@ -53,9 +53,27 @@ export const chatRooms: ChatRoomListItem[] = [
   {
     id: 'room_6',
     name: '엄마',
-    lastMessage: '들어올 때 두부랑 우유 사가지고 들어와~ 사골국 끓여놨다.',
+    lastMessage: '아들 조심히 와.',
     lastMessageTime: '10월 24일 오후 5:15',
     unreadCount: 0,
     noticeTitle: '집 비밀번호 및 장보기 메모',
   },
 ]
+
+export const taskOneExtraRoom: ChatRoomListItem = {
+  id: 'room_0',
+  name: '윤진효',
+  lastMessage: 'ㄱㄱ',
+  lastMessageTime: '',
+  unreadCount: 0,
+  noticeTitle: '',
+}
+
+export const diceRoom: ChatRoomListItem = {
+  id: 'room_dice',
+  name: "보드게임 중앙동아리 '다이스'",
+  lastMessage: '오케이 이번엔 진짜 안 늦는다 ㅋㅋㅋ',
+  lastMessageTime: '',
+  unreadCount: 0,
+  noticeTitle: '',
+}

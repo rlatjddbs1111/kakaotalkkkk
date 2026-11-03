@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ChatRoomListItem } from '../data/chatRooms'
-import { conversations, type ConversationMessage } from '../data/conversations'
+import { conversations, type Conversation, type ConversationMessage } from '../data/conversations'
 
 function BackIcon() {
   return (
@@ -108,6 +108,8 @@ export function ChatRoomView({
   onOpenNotice,
   targetMessageNumber,
   targetQuery,
+  conversationOverride,
+  participantName,
 }: {
   room: ChatRoomListItem
   unreadTotal: number
@@ -117,9 +119,18 @@ export function ChatRoomView({
   onOpenNotice: () => void
   targetMessageNumber?: number | null
   targetQuery?: string
+  conversationOverride?: Conversation
+  participantName?: string
 }) {
-  const conversation = conversations[room.id]
+  const sourceConversation = conversationOverride ?? conversations[room.id] ?? { messages: [] }
+  const conversation = participantName ? {
+    ...sourceConversation,
+    messages: sourceConversation.messages.map((message) => message.isSystem && message.text.includes('김성윤')
+      ? { ...message, text: `${participantName}님이 입장하셨습니다.` }
+      : message.isMine ? { ...message, sender: participantName } : message),
+  } : sourceConversation
   const timelineRef = useRef<HTMLDivElement>(null)
+  const followsLatestRef = useRef(true)
   const [isNoticeVisible, setIsNoticeVisible] = useState(true)
 
   useEffect(() => setIsNoticeVisible(true), [room.id])
@@ -130,15 +141,15 @@ export function ChatRoomView({
     if (targetMessageNumber) {
       const target = timeline.querySelector<HTMLElement>(`[data-message-number="${targetMessageNumber}"]`)
       if (target) target.scrollIntoView({ block: 'center', behavior: 'instant' })
-    } else {
+    } else if (followsLatestRef.current) {
       timeline.scrollTop = timeline.scrollHeight
     }
-  }, [room.id, targetMessageNumber])
+  }, [room.id, targetMessageNumber, conversation.messages.length])
 
   return (
     <div className="chat-room-view">
       <ChatRoomHeader room={room} unreadTotal={unreadTotal} onBack={onBack} onOpenDrawer={onOpenDrawer} onOpenSearch={onOpenSearch} />
-      {isNoticeVisible && (
+      {room.noticeTitle && isNoticeVisible && (
         <div className="chat-notice-banner">
           <button type="button" className="chat-notice-open" onClick={onOpenNotice} aria-label={`공지 보기: ${room.noticeTitle}`}>
             <NoticeIcon />
@@ -147,7 +158,10 @@ export function ChatRoomView({
           <button type="button" className="chat-notice-dismiss" onClick={() => setIsNoticeVisible(false)} aria-label="공지 띠 닫기"><CloseIcon /></button>
         </div>
       )}
-      <div className="chat-timeline" ref={timelineRef} aria-label={`${room.name} 대화`}>
+      <div className="chat-timeline" ref={timelineRef} aria-label={`${room.name} 대화`} onScroll={(event) => {
+        const timeline = event.currentTarget
+        followsLatestRef.current = timeline.scrollHeight - timeline.scrollTop - timeline.clientHeight < 36
+      }}>
         {conversation.dateLabel && <div className="chat-date-divider"><span>{conversation.dateLabel}</span></div>}
         {conversation.messages.map((message, index) => {
           const previous = conversation.messages[index - 1]

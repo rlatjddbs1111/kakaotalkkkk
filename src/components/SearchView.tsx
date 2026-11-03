@@ -37,20 +37,21 @@ function highlight(text: string, query: string) {
   return <>{text.slice(0, match)}<mark>{text.slice(match, match + query.length)}</mark>{text.slice(match + query.length)}</>
 }
 
-export function SearchView({ onCancel, onSelect, onQueryChange }: { onCancel: () => void; onSelect: (hit: SearchHit) => void; onQueryChange: (query: string) => void }) {
+export function SearchView({ onCancel, onSelect, onQueryChange, onSearchSubmit, rooms = chatRooms, conversationData = conversations }: { onCancel: () => void; onSelect: (hit: SearchHit) => void; onQueryChange: (query: string) => void; onSearchSubmit?: (query: string) => void; rooms?: typeof chatRooms; conversationData?: typeof conversations }) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const results = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
     if (!needle) return []
-    return chatRooms.flatMap((room) => {
-      const conversation = conversations[room.id]
+    return rooms.flatMap((room) => {
+      const conversation = conversationData[room.id]
+      if (!conversation) return []
       return conversation.messages
         .filter((message) => !message.isSystem && message.text.toLocaleLowerCase().includes(needle))
         .map((message) => ({ roomId: room.id, roomName: room.name, message, dateLabel: conversation.dateLabel }))
     })
-  }, [query])
+  }, [query, rooms, conversationData])
   const safeIndex = results.length ? activeIndex % results.length : 0
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export function SearchView({ onCancel, onSelect, onQueryChange }: { onCancel: ()
             onChange={(event) => { setQuery(event.target.value); onQueryChange(event.target.value); setActiveIndex(0) }}
             placeholder="대화내용 검색"
             aria-label="대화내용 검색"
+            onKeyDown={(event) => { if (event.key === 'Enter') onSearchSubmit?.(query) }}
             autoFocus
           />
           {query && <button type="button" className="search-clear" aria-label="검색어 지우기" onClick={clearQuery}><ClearGlyph /></button>}

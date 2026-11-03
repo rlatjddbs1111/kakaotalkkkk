@@ -1,0 +1,100 @@
+.experiment-frame { background: #fff; }
+.experiment-status {
+  display: flex;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px;
+  font: 700 14px Arial, sans-serif;
+}
+.experiment-page {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 28px 28px 36px;
+}
+.experiment-page h1 { margin: 0 0 18px; font-size: 28px; letter-spacing: -1px; line-height: 1.35; }
+.experiment-page > p { color: #666; font-size: 16px; line-height: 1.7; }
+.experiment-eyebrow { margin: 0 0 10px; color: #4388f5 !important; font-size: 14px !important; font-weight: 700; }
+.experiment-task-prompt { margin: 12px 0 auto; padding: 22px 18px; border-radius: 16px; background: #f6f7f8; color: #222 !important; font-size: 19px !important; }
+.experiment-primary, .experiment-secondary {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #318fe7;
+  color: #fff;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+}
+.experiment-primary:disabled { background: #b9c8d7; cursor: not-allowed; }
+.experiment-secondary { border: 1px solid #ddd; background: #fff; color: #333; }
+.participant-name-field { display: grid; gap: 8px; margin: 18px 0 4px; color: #555; font-size: 14px; font-weight: 650; }
+.participant-name-field input { width: 100%; min-height: 52px; padding: 0 14px; border: 1px solid #d6d6d6; border-radius: 11px; background: #fff; color: #222; font: inherit; font-size: 16px; }
+.participant-name-field input:focus { border-color: #318fe7; outline: 2px solid rgb(49 143 231 / 18%); }
+.experiment-info-card { display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; margin: 10px 0; padding: 18px; border-radius: 14px; background: #f6f7f8; }
+.experiment-info-card span { color: #777; }
+.experiment-error, .experiment-storage-warning { color: #b42318 !important; font-size: 13px !important; }
+.experiment-cloud-note { color: #8a5b00 !important; font-size: 12px !important; }
+.experiment-active { width: 100%; height: 100%; }
+.experiment-task-controls {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid #e5e5e5;
+  background: #fff;
+}
+.experiment-task-controls button {
+  flex: 1 1 0;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid #338cf0;
+  border-radius: 10px;
+  background: #fff;
+  color: #2878d1;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
+.experiment-task-controls button:first-child { background: #318fe7; color: #fff; }
+.experiment-task-controls .experiment-abandon-button { flex: 0 0 auto; border-color: #ccc; color: #555; }
+.experiment-dialog-backdrop { position: absolute; z-index: 90; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(0 0 0 / 45%); }
+.experiment-confirm-dialog { width: 100%; padding: 22px; border-radius: 18px; background: #fff; box-shadow: 0 12px 40px #0002; }
+.experiment-confirm-dialog h2 { margin: 0 0 10px; font-size: 19px; }
+.experiment-confirm-dialog p { color: #666; font-size: 15px; line-height: 1.55; }
+.experiment-confirm-dialog button { width: 100%; min-height: 44px; margin-top: 8px; border: 1px solid #ddd; border-radius: 10px; background: #fff; font: inherit; }
+.experiment-confirm-dialog button:last-child { border-color: #318fe7; background: #318fe7; color: #fff; }
+.experiment-storage-warning { position: absolute; z-index: 100; right: 12px; bottom: 70px; left: 12px; padding: 12px; border-radius: 10px; background: #fff0ee; }
+.experiment-result-list { margin: 12px 0; border: 1px solid #eee; border-radius: 12px; }
+.experiment-result-list article { display: flex; justify-content: space-between; gap: 10px; padding: 13px; border-bottom: 1px solid #eee; font-size: 14px; }
+.experiment-result-list article:last-child { border-bottom: 0; }
+.experiment-result-list article span { color: #666; white-space: nowrap; }
+.experiment-upload-state { margin-top: 14px; padding: 15px; border: 1px solid #e4e4e4; border-radius: 13px; background: #f8f9fa; }
+.experiment-upload-state h2 { margin: 0 0 8px; font-size: 16px; }
+.experiment-upload-state p { margin: 0; color: #555; font-size: 14px; line-height: 1.55; }
+.experiment-upload-state.is-synced { border-color: #b8dfc4; background: #f1faf4; }
+.experiment-upload-state.is-uploading { border-color: #c8ddf4; background: #f1f7fd; }
+.experiment-upload-state.is-pending, .experiment-upload-state.is-error { border-color: #f0d0c7; background: #fff7f4; }
+.experiment-upload-state .experiment-secondary { min-height: 44px; margin-top: 12px; }
+.task3-answer-controls { align-items: flex-end; flex-wrap: wrap; }
+.task3-answer-form { display: grid; flex: 1 1 100%; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 7px; }
+.task3-answer-form label { display: grid; min-width: 0; gap: 4px; color: #666; font-size: 11px; }
+.task3-answer-form input { position: relative; z-index: 1; width: 100%; min-width: 0; height: 44px; padding: 4px 6px; border: 1px solid #d8d8d8; border-radius: 7px; background: #fff; color: #222; font: inherit; font-size: 15px; pointer-events: auto; touch-action: manipulation; }
+.experiment-task-controls .task3-answer-form button { grid-column: 1 / -1; min-width: 74px; min-height: 40px; padding: 5px 8px; font-size: 13px; }
+.experiment-task-controls .task3-answer-form button:disabled { border-color: #ddd; background: #eee; color: #999; }
+.experiment-task-controls .experiment-abandon-button { min-height: 36px; }
+
+@media (max-width: 360px) {
+  .experiment-page { padding-right: 20px; padding-left: 20px; }
+  .experiment-page h1 { font-size: 25px; }
+  .experiment-task-controls button { font-size: 12px; }
+  .task3-answer-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

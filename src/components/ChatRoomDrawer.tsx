@@ -1,5 +1,7 @@
-import { conversations } from '../data/conversations'
+import { useEffect, useState } from 'react'
+import { conversations, type Conversation } from '../data/conversations'
 import type { ChatRoomListItem } from '../data/chatRooms'
+import { formatDueAt, getEffectiveScheduleStatus, type RegisteredItem, type RegisteredTodo } from '../data/registeredItems'
 
 function DrawerIcon({ name }: { name: string }) {
   const paths: Record<string, string> = {
@@ -37,14 +39,43 @@ function DrawerHeader({ onBack }: { onBack: () => void }) {
   )
 }
 
-export function ChatRoomDrawer({ room, onBack }: { room: ChatRoomListItem; onBack: () => void }) {
-  const conversation = conversations[room.id]
+type DrawerSection = 'home' | 'schedule' | 'todo' | 'detail'
+
+export function ChatRoomDrawer({ room, onBack, items, itemsRoomId, conversationOverride, initialSection, onInitialSectionHandled, onUpdateItem, onCreateSchedule }: {
+  room: ChatRoomListItem
+  onBack: () => void
+  items: RegisteredItem[]
+  itemsRoomId?: string
+  conversationOverride?: Conversation
+  initialSection?: 'schedule' | 'todo' | null
+  onInitialSectionHandled: () => void
+  onUpdateItem: (item: RegisteredItem) => void
+  onCreateSchedule: () => void
+}) {
+  const [section, setSection] = useState<DrawerSection>('home')
+  const [selectedItem, setSelectedItem] = useState<RegisteredItem | null>(null)
+  const conversation = conversationOverride ?? conversations[room.id] ?? { messages: [] }
   const participants = [...new Set(conversation.messages.filter((message) => !message.isSystem).map((message) => message.sender))]
   if (conversation.messages.some((message) => message.isSystem && message.text.includes('김성윤'))) participants.push('김성윤')
+  const roomItems = items.filter((item) => item.roomId === (itemsRoomId ?? room.id))
+  const schedules = roomItems.filter((item) => item.kind === 'schedule')
+  const todos = roomItems.filter((item) => item.kind === 'todo')
+
+  useEffect(() => {
+    if (!initialSection) return
+    setSection(initialSection)
+    onInitialSectionHandled()
+  }, [initialSection, onInitialSectionHandled])
+
+  function backFromDrawer() {
+    if (section === 'detail') { setSection(selectedItem?.kind ?? 'home'); setSelectedItem(null); return }
+    if (section !== 'home') { setSection('home'); return }
+    onBack()
+  }
 
   return (
     <div className="drawer-view">
-      <DrawerHeader onBack={onBack} />
+      <DrawerHeader onBack={backFromDrawer} />
       <section className="drawer-identity" aria-label={`${room.name} 채팅방 정보`}>
         <div className="drawer-participant-tiles" aria-hidden="true">
           {participants.slice(0, 4).map((participant, index) => (
@@ -54,6 +85,7 @@ export function ChatRoomDrawer({ room, onBack }: { room: ChatRoomListItem; onBac
         <h1>{room.name}</h1>
       </section>
       <div className="drawer-scroll">
+        {section === 'home' ? <>
         <section className="drawer-card drawer-media-card" aria-label="공유 항목">
           <div className="drawer-section-title"><DrawerIcon name="photo" /><span>사진/동영상</span></div>
           <div className="drawer-media-strip" aria-hidden="true">
@@ -62,7 +94,7 @@ export function ChatRoomDrawer({ room, onBack }: { room: ChatRoomListItem; onBac
           <div className="drawer-category-row">
             <div><DrawerIcon name="file" /><span>파일</span></div>
             <div><DrawerIcon name="link" /><span>링크</span></div>
-            <div><DrawerIcon name="schedule" /><span>일정</span></div>
+            <button type="button" aria-label="등록된 일정 보기" onClick={() => setSection('schedule')}><DrawerIcon name="schedule" /><span>일정</span></button>
           </div>
         </section>
         <section className="drawer-card drawer-shortcuts" aria-label="채팅방 메뉴">
@@ -72,6 +104,11 @@ export function ChatRoomDrawer({ room, onBack }: { room: ChatRoomListItem; onBac
           <div><DrawerIcon name="call" /><span>통화</span></div>
         </section>
         <section className="drawer-card drawer-bot"><DrawerIcon name="bot" /><span>챗봇 <em>beta</em></span></section>
+        <section className="drawer-card drawer-briefing" aria-label="브리핑 보드">
+          <div className="drawer-briefing-heading"><h2>브리핑 보드</h2><span>{new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: 'numeric', weekday: 'short' }).format(new Date()).replaceAll('.', '.').replace(/\.$/, '')}</span></div>
+          <button type="button" onClick={() => setSection('schedule')}><DrawerIcon name="schedule" /><span>일정</span>{schedules.length > 0 && <b>{schedules.length}</b>}</button>
+          <button type="button" onClick={() => setSection('todo')}><span className="drawer-todo-mark">✓</span><span>할 일</span>{todos.length > 0 && <b>{todos.length}</b>}</button>
+        </section>
         <section className="drawer-card drawer-members" aria-label="대화상대 목록">
           <h2>대화상대 <span>{participants.length}</span></h2>
           <div className="drawer-invite"><span className="drawer-invite-icon"><DrawerIcon name="invite" /></span><span>초대하기</span></div>
@@ -84,7 +121,49 @@ export function ChatRoomDrawer({ room, onBack }: { room: ChatRoomListItem; onBac
             ))}
           </ul>
         </section>
+        </> : section === 'schedule' || section === 'todo' ? (
+          <section className="drawer-card registered-list-card" aria-label={section === 'schedule' ? '등록된 일정 목록' : '등록된 할 일 목록'}>
+            <h2>{section === 'schedule' ? '일정' : '할 일'} <span>{section === 'schedule' ? schedules.length : todos.length}</span></h2>
+            {(section === 'schedule' ? schedules : todos).length === 0 ? <p className="registered-empty">등록된 {section === 'schedule' ? '일정' : '할 일이'} 없습니다.</p> : (section === 'schedule' ? schedules : todos).map((item) => (
+              <button type="button" className="registered-list-item" key={item.id} onClick={() => { setSelectedItem(item); setSection('detail') }}>
+                <span className={`registered-item-mark ${item.kind}`}>{item.kind === 'schedule' ? '●' : item.status === 'completed' ? '✓' : '○'}</span>
+                <span className="registered-item-copy"><strong>{item.title}</strong><small>{item.kind === 'schedule' ? `${item.date}${item.allDay ? ' · 하루 종일' : item.time ? ` · ${item.time}` : ''} · ${getEffectiveScheduleStatus(item) === 'planned' ? '예정' : getEffectiveScheduleStatus(item) === 'past' ? '지난 일정' : '취소'}` : `기한 ${formatDueAt(item.dueAt)} · ${item.status === 'inProgress' ? '진행 중' : item.status === 'completed' ? '완료' : '더 이상 필요 없음'}`}</small></span>
+              </button>
+            ))}
+            {section === 'schedule' && <button type="button" className="registered-create-button" onClick={onCreateSchedule}>일정 만들기</button>}
+          </section>
+        ) : selectedItem ? (
+          <section className="drawer-card registered-detail-card" aria-label="등록 항목 상세">
+            <button type="button" className="registered-detail-back" onClick={() => setSection(selectedItem.kind)}>‹ 목록으로</button>
+            <span className={`registered-item-mark ${selectedItem.kind}`}>{selectedItem.kind === 'schedule' ? '●' : selectedItem.status === 'completed' ? '✓' : '○'}</span>
+            <h2>{selectedItem.title}</h2>
+            {selectedItem.kind === 'schedule' ? <dl>
+              <dt>날짜</dt><dd>{selectedItem.date}{selectedItem.allDay ? ' · 하루 종일' : selectedItem.time ? ` · ${selectedItem.time}` : ''}</dd>
+              {selectedItem.endDate && selectedItem.endDate !== selectedItem.date && <><dt>종료</dt><dd>{selectedItem.endDate}{selectedItem.endTime ? ` · ${selectedItem.endTime}` : ''}</dd></>}
+              <dt>상태</dt><dd>{getEffectiveScheduleStatus(selectedItem) === 'planned' ? '예정' : getEffectiveScheduleStatus(selectedItem) === 'past' ? '지난 일정' : '취소'}</dd>
+              <dt>캘린더</dt><dd>{selectedItem.calendar ? '내 캘린더' : '저장 안 함'}</dd>
+              {selectedItem.location && <><dt>장소</dt><dd>{selectedItem.location}</dd></>}
+              {selectedItem.description && <><dt>설명</dt><dd>{selectedItem.description}</dd></>}
+              {selectedItem.reminderMinutes !== null && <><dt>알림</dt><dd>{selectedItem.reminderMinutes === 0 ? '정각' : `${selectedItem.reminderMinutes}분 전`}</dd></>}
+            </dl> : <>
+              <dl><dt>기한</dt><dd>{formatDueAt(selectedItem.dueAt)}</dd><dt>상태</dt><dd>{selectedItem.status === 'inProgress' ? '진행 중' : selectedItem.status === 'completed' ? '완료' : '더 이상 필요 없음'}</dd><dt>유효성 확인</dt><dd>{selectedItem.validityReviewStatus === 'notRequested' ? '미요청' : selectedItem.validityReviewStatus}</dd><dt>반복</dt><dd>{selectedItem.repeat}</dd>{selectedItem.reminderMinutes !== null && <><dt>알림</dt><dd>{selectedItem.reminderMinutes === 0 ? '정각' : `${selectedItem.reminderMinutes}분 전`}</dd></>}</dl>
+              <div className="registered-todo-actions">
+                {selectedItem.status === 'inProgress' ? <>
+                  <button type="button" className="registered-complete-button" onClick={() => updateTodo(selectedItem, 'completed')}>완료로 표시</button>
+                  <button type="button" className="registered-not-needed-button" onClick={() => updateTodo(selectedItem, 'notNeeded')}>더 이상 필요 없음</button>
+                </> : <button type="button" className="registered-complete-button" onClick={() => updateTodo(selectedItem, 'inProgress')}>진행 중으로 변경</button>}
+              </div>
+            </>}
+            {selectedItem.kind === 'schedule' && selectedItem.status !== 'cancelled' && <button type="button" className="registered-not-needed-button" onClick={() => { const updated = { ...selectedItem, status: 'cancelled' as const }; setSelectedItem(updated); onUpdateItem(updated) }}>일정 취소</button>}
+          </section>
+        ) : null}
       </div>
     </div>
   )
+
+  function updateTodo(item: RegisteredTodo, status: RegisteredTodo['status']) {
+    const updated: RegisteredTodo = { ...item, status }
+    setSelectedItem(updated)
+    onUpdateItem(updated)
+  }
 }
