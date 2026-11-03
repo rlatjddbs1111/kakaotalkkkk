@@ -1,0 +1,213 @@
+.message-add-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  background: rgb(20 29 35 / 66%);
+}
+
+.message-add-sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 53%;
+  min-height: 390px;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 34px 34px 0 0;
+  background: #fff;
+  transition: height 180ms ease-out;
+}
+
+.message-add-sheet.is-expanded {
+  height: 68%;
+}
+
+.message-add-handle {
+  display: grid;
+  flex: 0 0 34px;
+  width: 100%;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: #fff;
+}
+
+.message-add-handle span {
+  width: 36px;
+  height: 4px;
+  border-radius: 3px;
+  background: #999;
+}
+
+.message-add-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+  scrollbar-width: none;
+}
+
+.message-add-scroll::-webkit-scrollbar { display: none; }
+
+.message-add-recent-head {
+  display: flex;
+  height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.message-add-recent-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.message-add-recent-head button {
+  height: 34px;
+  padding: 0 19px;
+  border: 0;
+  border-radius: 18px;
+  background: #f1f1f1;
+  color: #888;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.message-add-recent {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+  padding: 0 16px;
+}
+
+.message-add-camera,
+.message-add-photo-placeholder {
+  position: relative;
+  flex: 0 0 104px;
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
+  border-radius: 19px;
+  background: #e7e8e9;
+}
+
+.message-add-camera {
+  display: grid;
+  place-items: center;
+  background: #999;
+  color: white;
+}
+
+.message-add-camera span {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 32px;
+  place-items: center;
+  border-radius: 6px;
+  background: #fff;
+  color: #999;
+  font-size: 17px;
+}
+
+.message-add-camera span::before {
+  position: absolute;
+  top: -5px;
+  left: 13px;
+  width: 17px;
+  height: 8px;
+  border-radius: 4px 4px 0 0;
+  background: #fff;
+  content: "";
+}
+
+.message-add-photo-placeholder::after {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #c4c6c7;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 55%);
+  content: "";
+}
+
+.message-add-permission {
+  margin: 14px 20px 10px;
+  font-size: 16px;
+  letter-spacing: -0.45px;
+  white-space: nowrap;
+}
+
+.message-add-link {
+  margin: 0 20px 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #3478df;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.message-add-primary-actions,
+.message-add-group {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #dedede;
+}
+
+.message-add-primary-actions > div,
+.message-add-item {
+  display: flex;
+  height: 58px;
+  flex: 0 0 58px;
+  align-items: center;
+  gap: 16px;
+  padding: 0 22px;
+  font-size: 19px;
+  letter-spacing: -0.55px;
+}
+
+.message-add-group .message-add-item {
+  height: 57px;
+  flex-basis: 57px;
+}
+
+.message-add-group + .message-add-group { border-top: 1px solid #dedede; }
+
+.message-add-primary-actions svg,
+.message-add-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.message-add-primary-actions > div:first-child svg { color: #43aa68; }
+.message-add-primary-actions > div:last-child svg { color: #4f8ff5; }
+
+.message-add-icon {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+}
+
+.message-add-icon.green { color: #10ae63; }
+.message-add-icon.pink { color: #f05b68; }
+.message-add-icon.yellow { color: #f5a800; }
+.message-add-icon.blue { color: #3489f6; }
+.message-add-icon.gray { color: #8991a1; }
+.message-add-icon.purple { color: #8c5de9; }
+
+@media (max-height: 700px) {
+  .message-add-sheet { min-height: 330px; }
+}

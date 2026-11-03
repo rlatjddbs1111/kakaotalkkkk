@@ -1,0 +1,205 @@
+.search-screen {
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  overflow: hidden;
+  background: rgb(145 176 194 / 13%);
+}
+
+.search-topbar {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: #abc1d1;
+}
+
+.search-field {
+  display: flex;
+  height: 36px;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: rgb(133 162 180 / 48%);
+  color: #17191a;
+}
+
+.search-field > svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.1;
+}
+
+.search-field input {
+  width: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #222;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+}
+
+.search-field input::placeholder { color: #64747d; opacity: 1; }
+
+.search-clear {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #5a6870;
+}
+
+.search-clear svg { width: 19px; height: 19px; fill: currentColor; stroke: #d6dce0; stroke-width: 2; }
+
+.search-cancel {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #191919;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+}
+
+.search-results {
+  position: absolute;
+  right: 12px;
+  bottom: 88px;
+  left: 12px;
+  display: flex;
+  max-height: min(42%, 300px);
+  flex-direction: column;
+  overflow-y: auto;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 5px 24px rgb(20 32 42 / 12%);
+  scrollbar-width: none;
+}
+
+.search-results::-webkit-scrollbar { display: none; }
+
+.search-result {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid rgb(20 30 35 / 8%);
+  background: transparent;
+  text-align: left;
+}
+
+.search-result:last-child { border-bottom: 0; }
+.search-result.is-current { background: rgb(58 144 239 / 9%); }
+
+.search-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #25292c;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.3px;
+}
+
+.search-result-heading time {
+  flex: 0 0 auto;
+  color: #77838a;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.search-result-body {
+  overflow: hidden;
+  color: #25292c;
+  font-size: 14px;
+  letter-spacing: -0.35px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result mark,
+.message-search-highlight {
+  border-radius: 2px;
+  background: #ffe500;
+  color: inherit;
+}
+
+.search-empty {
+  display: grid;
+  min-height: 94px;
+  place-items: center;
+  color: #71777b;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.search-navigation {
+  position: absolute;
+  right: 10px;
+  bottom: 29px;
+  left: 10px;
+  display: flex;
+  height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 27px;
+  background: rgb(255 255 255 / 84%);
+}
+
+.search-navigation button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #17191a;
+}
+
+.search-navigation button:disabled { color: #a4a7a9; }
+.search-navigation button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.search-navigation button:nth-last-child(-n + 2) svg { width: 21px; height: 21px; stroke-width: 2.5; }
+
+.search-result-count {
+  overflow: hidden;
+  flex: 1 1 auto;
+  color: #72777a;
+  font-size: 15px;
+  font-weight: 650;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-timeline [data-message-number] { scroll-margin-block: 45vh; }
+.message-search-highlight { padding: 0 1px; }
