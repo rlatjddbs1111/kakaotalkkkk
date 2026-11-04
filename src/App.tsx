@@ -6,6 +6,7 @@ import { SearchView, type SearchHit } from './components/SearchView'
 import { NoticeDetailView } from './components/NoticeDetailView'
 import { RegistrationFlow } from './components/RegistrationFlow'
 import { ExperimentFlow, TaskControls, useExperiment } from './components/ExperimentFlow'
+import { TaskHintBar } from './components/TaskHintBar'
 import { chatRooms, type ChatRoomListItem } from './data/chatRooms'
 import { readRegisteredItems, writeRegisteredItems, type RegisteredItem } from './data/registeredItems'
 import { createExperimentRooms, getTaskConversationMap, getTaskRoom, getExperimentRoomId } from './data/experimentTasks'
@@ -224,7 +225,7 @@ function ChatApplication() {
   const experimentRooms = createExperimentRooms(taskId)
   const rawConversationMap: Record<string, Conversation> = session ? getTaskConversationMap(taskId, session) : conversations
   const visibleMessageCount = taskId === 'task_2' && experiment.attempt
-    ? Math.min(conversations.room_1.messages.length, Math.floor(Math.max(0, Date.now() - Date.parse(experiment.attempt.startTime)) / 400))
+    ? Math.min(rawConversationMap.room_1.messages.length, Math.floor(Math.max(0, Date.now() - Date.parse(experiment.attempt.startTime)) / 400))
     : undefined
   const conversationMap: Record<string, Conversation> = taskId === 'task_2'
     ? { ...rawConversationMap, room_1: { ...rawConversationMap.room_1, messages: rawConversationMap.room_1.messages.slice(0, visibleMessageCount) } }
@@ -302,6 +303,7 @@ function ChatApplication() {
     <main className="app-stage" aria-label="채팅 정보 탐색 앱">
       <div className={`mobile-frame${selectedRoom ? ' is-chat' : ''}${isDrawerOpen ? ' is-drawer' : ''}${isNoticeOpen ? ' is-notice' : ''}`}>
         <StatusBar time={selectedRoom ? '7:52' : '7:50'} isChat={Boolean(selectedRoom) && !isDrawerOpen} />
+        <TaskHintBar />
         <section className={`app-content${selectedRoom ? ' chat-app-content' : ''}${isDrawerOpen ? ' drawer-app-content' : ''}`}>
           {selectedRoom && isDrawerOpen ? (
             <ChatRoomDrawer

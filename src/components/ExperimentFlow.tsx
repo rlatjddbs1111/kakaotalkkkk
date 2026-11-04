@@ -1,13 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { experimentTaskOrder, getTaskExpectedResponse, taskInstructions } from '../data/experimentTasks'
+import { experimentTaskOrder, getTaskConversation, getTaskExpectedResponse, taskInstructions } from '../data/experimentTasks'
 import { getSeoulDate } from '../data/experimentDates'
 import { localExperimentRepository } from '../data/experimentRepository'
 import { beginAnonymousParticipant, firebaseConfigured, getAnonymousUser } from '../data/firebaseClient'
 import { firebaseExperimentRepository } from '../data/firebaseExperimentRepository'
-import type { ExperimentSession, ExperimentTaskId, ExperimentTaskResult, ExperimentScreen } from '../data/experimentTypes'
+import type { ExperimentFeedback, ExperimentSession, ExperimentTaskId, ExperimentTaskResult, ExperimentScreen } from '../data/experimentTypes'
 import { createAttempt, csvEscape, finishAttempt } from '../services/experimentTracker'
 import type { RegisteredItem } from '../data/registeredItems'
-import { conversations } from '../data/conversations'
 
 type ExperimentContextValue = {
   session: ExperimentSession
@@ -32,6 +31,8 @@ type ExperimentContextValue = {
   closeAbandonDialog: () => void
   confirmAbandon: () => void
   setScreen: (screen: ExperimentScreen) => void
+  recordTaskHintToggle: (action: 'open' | 'close') => void
+  submitFeedback: (difficultyRating: 1 | 2 | 3 | 4 | 5 | null, comment: string, skipped: boolean) => void
 }
 
 const ExperimentContext = createContext<ExperimentContextValue | null>(null)
@@ -84,6 +85,7 @@ function newSession(participantName: string, firebaseOwnerUid?: string): Experim
   const participantId = `P${String(nextParticipantNumber).padStart(3, '0')}`
   return {
     schemaVersion: 1,
+    experimentVersion: 'condition-a-v2',
     participantId,
     participantName,
     condition: 'A',
@@ -104,7 +106,7 @@ function SystemBottom() {
   return <div className="system-bottom-space" aria-hidden="true"><span className="home-indicator" /></div>
 }
 
-const csvHeaders = ['participantId', 'participantName', 'condition', 'sessionId', 'taskId', 'taskAttemptId', 'startTime', 'endTime', 'duration', 'success', 'completionStatus', 'wrongAttempts', 'clickCount', 'visitedRooms', 'answerAccuracy', 'searchQueries', 'submittedAnswers', 'actualResponse', 'registrationPath']
+const csvHeaders = ['experimentVersion', 'participantId', 'participantName', 'condition', 'sessionId', 'difficultyRating', 'feedbackComment', 'feedbackSkipped', 'feedbackSubmittedAt', 'taskId', 'taskAttemptId', 'startTime', 'endTime', 'duration', 'success', 'completionStatus', 'wrongAttempts', 'clickCount', 'visitedRooms', 'answerAccuracy', 'searchQueries', 'submittedAnswers', 'actualResponse', 'registrationPath']
 
 export function downloadSessionsCsv(sessions: ExperimentSession[]) {
   const rows = sessions.flatMap((session) => session.taskResults.map((result) => {
@@ -112,7 +114,7 @@ export function downloadSessionsCsv(sessions: ExperimentSession[]) {
       ...(Array.isArray(result.actualResponse.task2ScheduleSubmissions) ? result.actualResponse.task2ScheduleSubmissions : []),
       ...(Array.isArray(result.actualResponse.task3AnswerSubmissions) ? result.actualResponse.task3AnswerSubmissions : []),
     ]
-    return [session.participantId, session.participantName, session.condition, session.sessionId, result.taskId, result.taskAttemptId, result.startTime, result.endTime, result.duration, result.success, result.completionStatus, result.wrongAttempts, result.clickCount, result.visitedRooms, result.answerAccuracy, result.searchQueries, submittedAnswers, result.actualResponse, result.registrationPath]
+    return [session.experimentVersion, session.participantId, session.participantName, session.condition, session.sessionId, session.feedback?.difficultyRating, session.feedback?.comment, session.feedback?.skipped, session.feedback?.submittedAt, result.taskId, result.taskAttemptId, result.startTime, result.endTime, result.duration, result.success, result.completionStatus, result.wrongAttempts, result.clickCount, result.visitedRooms, result.answerAccuracy, result.searchQueries, submittedAnswers, result.actualResponse, result.registrationPath]
   }))
   const csv = `\uFEFF${[csvHeaders, ...rows].map((row) => row.map(csvEscape).join(',')).join('\r\n')}`
   const href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
@@ -138,6 +140,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   })
   const sessionRef = useRef(session)
   const syncRequestRef = useRef(0)
+  const feedbackSubmitLock = useRef(false)
   sessionRef.current = session
 
   useEffect(() => {
@@ -186,7 +189,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
     if (!activeTask2Attempt || activeTask2Attempt.completionStatus !== 'inProgress') return
     const attemptId = activeTask2Attempt.taskAttemptId
     const startedAt = activeTask2Attempt.startTime
-    const totalMessages = conversations.room_1.messages.length
+    const totalMessages = session ? getTaskConversation('task_2', session)?.messages.length ?? 0 : 0
     const updateVisibleCount = () => {
       const count = Math.min(totalMessages, Math.floor(Math.max(0, Date.now() - Date.parse(startedAt)) / 400))
       setSession((current) => {
@@ -199,7 +202,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
     updateVisibleCount()
     const intervalId = window.setInterval(updateVisibleCount, 100)
     return () => window.clearInterval(intervalId)
-  }, [activeTask2Attempt?.taskAttemptId, activeTask2Attempt?.startTime, activeTask2Attempt?.completionStatus])
+  }, [activeTask2Attempt?.taskAttemptId, activeTask2Attempt?.startTime, activeTask2Attempt?.completionStatus, session?.sessionId])
 
   function updateAttempt(update: (attempt: ExperimentTaskResult) => ExperimentTaskResult) {
     setSession((current) => current?.currentAttempt ? { ...current, currentAttempt: update(current.currentAttempt) } : current)
@@ -278,7 +281,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
       return {
         ...current,
         endedAt: lastTask ? taskResult.endTime : null,
-        screen: lastTask ? 'complete' : 'taskInstruction',
+        screen: lastTask ? 'feedback' : 'taskInstruction',
         currentTaskIndex: lastTask ? current.currentTaskIndex : nextIndex,
         currentAttempt: null,
         taskResults,
@@ -307,6 +310,45 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
     const selection = response.selectedMessage as { roomId?: string; messageNumber?: number } | undefined
     const success = selection?.roomId === expected.roomId && selection?.messageNumber === expected.messageNumber
     complete(success ? 'success' : 'failure', success, success ? 1 : 0)
+  }
+
+  function recordTaskHintToggle(action: 'open' | 'close') {
+    updateAttempt((attempt) => {
+      const interactionEvent = {
+        eventId: crypto.randomUUID(),
+        eventType: 'taskHintToggle',
+        action,
+        taskId: attempt.taskId,
+        taskAttemptId: attempt.taskAttemptId,
+        occurredAt: new Date().toISOString(),
+      }
+      return {
+        ...attempt,
+        actualResponse: {
+          ...attempt.actualResponse,
+          interactionEvents: [
+            ...(Array.isArray(attempt.actualResponse.interactionEvents) ? attempt.actualResponse.interactionEvents : []),
+            interactionEvent,
+          ],
+        },
+      }
+    })
+  }
+
+  function submitFeedback(difficultyRating: 1 | 2 | 3 | 4 | 5 | null, comment: string, skipped: boolean) {
+    if (feedbackSubmitLock.current) return
+    feedbackSubmitLock.current = true
+    setSession((current) => {
+      if (!current || current.screen !== 'feedback' || current.feedback) return current
+      const feedback: ExperimentFeedback = {
+        feedbackId: crypto.randomUUID(),
+        difficultyRating: skipped ? null : difficultyRating,
+        comment: skipped ? '' : comment.trim().slice(0, 500),
+        skipped,
+        submittedAt: new Date().toISOString(),
+      }
+      return { ...current, feedback, screen: 'complete' }
+    })
   }
 
   function contextClick(event: MouseEvent<HTMLDivElement>) {
@@ -457,6 +499,8 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
     closeAbandonDialog: () => setShowAbandon(false),
     confirmAbandon: () => complete('abandoned', false, 0, { abandoned: true }),
     setScreen: (screen) => setSession((current) => current ? { ...current, screen } : current),
+    recordTaskHintToggle,
+    submitFeedback,
   }) : null, [session, taskId])
 
   if (!session) {
@@ -501,6 +545,10 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
       <p className="experiment-task-prompt">{task.prompt}</p>
       <button type="button" className="experiment-primary" data-experiment-ui="true" onClick={startTask}>과업 시작</button>
     </section></ExperimentFrame>
+  }
+
+  if (session.screen === 'feedback') {
+    return <ExperimentFrame><FeedbackScreen onSubmit={submitFeedback} /></ExperimentFrame>
   }
 
   if (session.screen === 'complete') {
@@ -564,6 +612,44 @@ export function TaskControls({ taskId, selectedRoomId, onAbandon, onWrongRoom }:
     </form>
     <button type="button" data-count-experiment-click="true" className="experiment-abandon-button" onClick={onAbandon}>과업 포기</button>
   </div>
+}
+
+function FeedbackScreen({ onSubmit }: { onSubmit: (rating: 1 | 2 | 3 | 4 | 5 | null, comment: string, skipped: boolean) => void }) {
+  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | null>(null)
+  const [comment, setComment] = useState('')
+  const submitLock = useRef(false)
+  const submit = (skipped: boolean) => {
+    if (submitLock.current) return
+    submitLock.current = true
+    onSubmit(rating, comment, skipped)
+  }
+
+  return <section className="experiment-page experiment-feedback">
+    <p className="experiment-eyebrow">실험 후 의견 (선택)</p>
+    <h1>실험 후 의견</h1>
+    <p>응답은 선택 사항이며, 과업 결과에는 영향을 주지 않습니다.</p>
+    <fieldset className="feedback-rating">
+      <legend>필요한 정보를 찾는 과정은 전반적으로 어떠셨나요?</legend>
+      <div className="feedback-rating-options">
+        {(['매우 어려웠다', '어려웠다', '보통이었다', '쉬웠다', '매우 쉬웠다'] as const).map((label, index) => {
+          const value = (index + 1) as 1 | 2 | 3 | 4 | 5
+          return <label key={value}>
+            <input type="radio" name="difficulty-rating" value={value} checked={rating === value} onChange={() => setRating(value)} />
+            <span>{value}. {label}</span>
+          </label>
+        })}
+      </div>
+    </fieldset>
+    <label className="feedback-comment">
+      <span>정보를 찾으면서 느낀 점이나 개선이 필요하다고 생각한 부분이 있다면 자유롭게 작성해 주세요.</span>
+      <textarea value={comment} onChange={(event) => setComment(event.currentTarget.value.slice(0, 500))} maxLength={500} rows={4} placeholder="특별한 의견이 없다면 비워 두셔도 됩니다." />
+      <small>{comment.length}/500</small>
+    </label>
+    <div className="feedback-actions">
+      <button type="button" className="experiment-primary" onClick={() => submit(false)}>의견 제출 및 완료</button>
+      <button type="button" className="experiment-secondary" onClick={() => submit(true)}>건너뛰기</button>
+    </div>
+  </section>
 }
 
 function normalizeTaskTime(value: string) {

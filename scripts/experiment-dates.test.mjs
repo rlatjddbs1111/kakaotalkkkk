@@ -31,7 +31,15 @@ for (const scenario of cases) {
     const dates = getExperimentDates(scenario.referenceDate)
     assert.equal(dates.task2Date, scenario.task2Date)
     assert.equal(dates.task2DateLabel, scenario.task2Label)
+    assert.equal(dates.task2UploadDate, addDaysForTest(scenario.referenceDate, 2))
+    assert.equal(dates.task2InterviewDate, addDaysForTest(scenario.referenceDate, 3))
     assert.equal(dates.task3Date, scenario.task3Date)
     assert.equal(dates.task3DateLabel, scenario.task3Label)
   })
+}
+
+function addDaysForTest(value, days) {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
 }

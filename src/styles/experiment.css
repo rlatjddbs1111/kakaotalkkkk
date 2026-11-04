@@ -42,6 +42,19 @@
 .experiment-error, .experiment-storage-warning { color: #b42318 !important; font-size: 13px !important; }
 .experiment-cloud-note { color: #8a5b00 !important; font-size: 12px !important; }
 .experiment-active { width: 100%; height: 100%; }
+.task-hint-bar {
+  z-index: 20;
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-bottom: 1px solid #e4e8ec;
+  background: #f4f7fa;
+  color: #253447;
+  font-size: 12px;
+}
+.task-hint-summary { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 8px; }
+.task-hint-summary strong { overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.task-hint-summary button { flex: 0 0 auto; min-height: 30px; padding: 3px 9px; border: 1px solid #cfd9e3; border-radius: 8px; background: #fff; color: #315d85; font: inherit; font-weight: 650; }
+.task-hint-bar > p { margin: 4px 0 2px; padding: 7px 2px 2px; border-top: 1px solid #e0e6ec; color: #34495e; line-height: 1.5; }
 .experiment-task-controls {
   position: relative;
   z-index: 10;
@@ -84,6 +97,18 @@
 .experiment-upload-state.is-uploading { border-color: #c8ddf4; background: #f1f7fd; }
 .experiment-upload-state.is-pending, .experiment-upload-state.is-error { border-color: #f0d0c7; background: #fff7f4; }
 .experiment-upload-state .experiment-secondary { min-height: 44px; margin-top: 12px; }
+.experiment-feedback { justify-content: flex-start; gap: 10px; }
+.experiment-feedback > p { margin: 0; }
+.feedback-rating { min-width: 0; margin: 7px 0 0; padding: 12px; border: 1px solid #e2e5e8; border-radius: 12px; }
+.feedback-rating legend { padding: 0 4px; color: #222; font-size: 15px; font-weight: 650; line-height: 1.45; }
+.feedback-rating-options { display: grid; gap: 4px; }
+.feedback-rating-options label { display: flex; min-height: 37px; align-items: center; gap: 9px; color: #333; font-size: 14px; }
+.feedback-rating-options input { width: 18px; height: 18px; accent-color: #318fe7; }
+.feedback-comment { display: grid; gap: 7px; color: #333; font-size: 14px; line-height: 1.5; }
+.feedback-comment textarea { width: 100%; min-height: 96px; resize: vertical; padding: 10px; border: 1px solid #d8d8d8; border-radius: 10px; font: inherit; font-size: 14px; }
+.feedback-comment small { justify-self: end; color: #777; font-size: 12px; }
+.feedback-actions { display: grid; gap: 0; margin-top: auto; }
+.feedback-actions .experiment-primary, .feedback-actions .experiment-secondary { margin-top: 8px; }
 .task3-answer-controls { align-items: flex-end; flex-wrap: wrap; }
 .task3-answer-form { display: grid; flex: 1 1 100%; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 7px; }
 .task3-answer-form label { display: grid; min-width: 0; gap: 4px; color: #666; font-size: 11px; }

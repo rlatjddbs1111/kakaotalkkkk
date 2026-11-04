@@ -48,6 +48,10 @@ export function getExperimentDates(referenceDate: string) {
     referenceDate,
     task2Date,
     task2DateLabel: formatExperimentDateLabel(task2Date),
+    task2UploadDate: addDays(referenceDate, 2),
+    task2UploadDateLabel: formatExperimentDateLabel(addDays(referenceDate, 2)),
+    task2InterviewDate: addDays(referenceDate, 3),
+    task2InterviewDateLabel: formatExperimentDateLabel(addDays(referenceDate, 3)),
     task3Date,
     task3DateLabel: formatExperimentDateLabel(task3Date),
   }

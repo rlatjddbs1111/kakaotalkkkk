@@ -1,6 +1,6 @@
 export type ExperimentCondition = 'A'
 export type ExperimentTaskId = 'task_1' | 'task_2' | 'task_3'
-export type ExperimentScreen = 'overview' | 'taskInstruction' | 'taskActive' | 'complete'
+export type ExperimentScreen = 'overview' | 'taskInstruction' | 'taskActive' | 'feedback' | 'complete'
 export type CompletionStatus = 'inProgress' | 'success' | 'failure' | 'abandoned' | 'timeout'
 
 export type ExperimentTaskResult = {
@@ -20,8 +20,17 @@ export type ExperimentTaskResult = {
   registrationPath?: 'plus' | 'drawer'
 }
 
+export type ExperimentFeedback = {
+  feedbackId: string
+  difficultyRating: 1 | 2 | 3 | 4 | 5 | null
+  comment: string
+  skipped: boolean
+  submittedAt: string
+}
+
 export type ExperimentSession = {
   schemaVersion: 1
+  experimentVersion?: string
   participantId: string
   participantName: string
   condition: ExperimentCondition
@@ -35,4 +44,5 @@ export type ExperimentSession = {
   currentTaskIndex: number
   currentAttempt: ExperimentTaskResult | null
   taskResults: ExperimentTaskResult[]
+  feedback?: ExperimentFeedback
 }

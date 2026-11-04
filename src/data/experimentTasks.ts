@@ -7,8 +7,8 @@ export const experimentTaskOrder: ExperimentTaskId[] = ['task_1', 'task_2', 'tas
 
 export const taskInstructions: Record<ExperimentTaskId, { title: string; prompt: string }> = {
   task_1: { title: '과업 1 · 채팅방 탐색', prompt: '할 일이 남아 있는 채팅방을 찾아 선택해 주세요.' },
-  task_2: { title: '과업 2 · 일정 등록', prompt: '다음 대화에서 예정된 일정을 확인하고, 해당 일정을 카카오톡에 등록해 주세요. 일정 등록을 완료했다고 판단하면 과업을 종료해 주세요.' },
-  task_3: { title: '과업 3 · 대화 탐색', prompt: '대화에서 조원들이 함께 만나기로 한 날짜와 시간을 확인해 주세요.' },
+  task_2: { title: '과업 2 · 일정 등록', prompt: '다음 대화에는 여러 일정이 나옵니다. 그중 발표 준비 모임 일정을 찾아 카카오톡 일정으로 등록해 주세요.' },
+  task_3: { title: '과업 3 · 대화 탐색', prompt: '동아리 채팅방에서 모임 일정을 찾아 날짜와 시간을 확인해 주세요.' },
 }
 
 function sessionReferenceDate(session: ExperimentSession) {
@@ -68,11 +68,23 @@ export function getTaskConversation(taskId: ExperimentTaskId, session: Experimen
   if (taskId === 'task_2') {
     const dates = getExperimentDates(sessionReferenceDate(session))
     const source = conversations.room_1
+    const messages: ConversationMessage[] = []
+    source.messages.forEach((message) => {
+      messages.push(message.number === 1 && message.isSystem
+        ? { ...message, text: `${session.participantName}님이 입장하셨습니다.` }
+        : message.number === 5
+          ? { ...message, text: `맞아요. 그리고 발표 준비 모임은 [${dates.task2DateLabel} 오후 7시, 학교 정문 앞 투썸플레이스]에서 진행하겠습니다.` }
+          : message)
+      if (message.number === 6) {
+        messages.push({ number: 0, sender: '김철수', text: `자료조사한 내용은 [${dates.task2UploadDateLabel}] 오후 11시 59분까지 드라이브에 업로드해 주세요.`, timestamp: '오후 1:17' })
+      }
+      if (message.number === 13) {
+        messages.push({ number: 0, sender: '최동현', text: `참고로 교수님 중간 점검 면담은 [${dates.task2InterviewDateLabel}] 오후 3시, 형남공학관 3층 세미나실이에요.`, timestamp: '오후 2:02' })
+      }
+    })
     return {
       dateLabel: formatExperimentDateLabel(dates.referenceDate),
-      messages: source.messages.map((message) => message.number === 5
-        ? { ...message, text: `맞아요. 그리고 발표 준비 모임은 [${dates.task2DateLabel} 오후 7시, 학교 정문 앞 투썸플레이스]에서 진행하겠습니다.` }
-        : message.isSystem ? { ...message, text: `${session.participantName}님이 입장하셨습니다.` } : message),
+      messages: messages.map((message, index) => ({ ...message, number: index + 1 })),
     }
   }
   const dates = getExperimentDates(sessionReferenceDate(session))

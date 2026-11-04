@@ -4,7 +4,7 @@ import { firebaseConfigured, firestore, getAnonymousUser } from './firebaseClien
 
 type InteractionEvent = {
   eventId: string
-  eventType: 'click' | 'searchQuery' | 'searchResultSelected'
+  eventType: 'click' | 'searchQuery' | 'searchResultSelected' | 'taskHintToggle'
   occurredAt: string
   [key: string]: unknown
 }
@@ -32,6 +32,9 @@ async function syncSession(session: ExperimentSession) {
     const requiredTasks = ['task_1', 'task_2', 'task_3']
     const hasAllTaskResults = requiredTasks.every((taskId) => session.taskResults.some((result) => result.taskId === taskId))
     if (!hasAllTaskResults) throw new Error('완료 세션의 과업 결과가 모두 준비되지 않았습니다.')
+    if (session.experimentVersion && session.screen === 'complete' && !session.feedback) {
+      throw new Error('설문 응답 또는 건너뛰기 기록이 준비되지 않았습니다.')
+    }
   }
   const user = await getAnonymousUser()
   const uid = user.uid
@@ -39,7 +42,7 @@ async function syncSession(session: ExperimentSession) {
     throw new Error('현재 익명 인증 계정이 이 실험 세션의 소유 계정과 다릅니다.')
   }
   const sessionRef = doc(firestore, 'participants', uid, 'sessions', session.sessionId)
-  const { taskResults: _taskResults, currentAttempt, firebaseOwnerUid: _firebaseOwnerUid, ...sessionSummary } = session
+  const { taskResults: _taskResults, currentAttempt, firebaseOwnerUid: _firebaseOwnerUid, feedback: _feedback, ...sessionSummary } = session
   const safeSummary = firestoreSafe({
     ...sessionSummary,
     ownerUid: uid,
@@ -66,6 +69,14 @@ async function syncSession(session: ExperimentSession) {
     syncedIds.add(event.eventId)
   }))
   lastSyncedEvents.set(syncedKey, syncedIds)
+
+  if (session.feedback) {
+    await setDoc(
+      doc(sessionRef, 'feedback', session.feedback.feedbackId),
+      firestoreSafe({ ...session.feedback, ownerUid: uid, participantId: session.participantId, sessionId: session.sessionId, condition: session.condition }),
+      { merge: true },
+    )
+  }
 }
 
 export const firebaseExperimentRepository: RemoteExperimentRepository = {
