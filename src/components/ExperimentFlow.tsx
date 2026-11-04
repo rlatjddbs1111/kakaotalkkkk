@@ -45,6 +45,7 @@ export function useExperiment() {
 
 const PARTICIPANT_NAME_DRAFT_KEY = 'kakao-study-participant-name-draft-v1'
 const NEW_SESSION_INTENT_KEY = 'kakao-study-new-session-intent-v1'
+const FEEDBACK_DRAFT_KEY_PREFIX = 'kakao-study-feedback-draft-v1:'
 type FirebaseUploadStatus = 'uploading' | 'synced' | 'pending' | 'error'
 
 function classifyUploadError(error: unknown): FirebaseUploadStatus {
@@ -58,6 +59,18 @@ function readParticipantNameDraft() {
     return window.localStorage.getItem(PARTICIPANT_NAME_DRAFT_KEY) ?? ''
   } catch {
     return ''
+  }
+}
+
+function readFeedbackDraft(sessionId: string) {
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(`${FEEDBACK_DRAFT_KEY_PREFIX}${sessionId}`) ?? '{}')
+    if (typeof value !== 'object' || value === null) return { rating: null, comment: '' }
+    const draft = value as { rating?: number | null; comment?: string }
+    const rating = [1, 2, 3, 4, 5].includes(Number(draft.rating)) ? Number(draft.rating) as 1 | 2 | 3 | 4 | 5 : null
+    return { rating, comment: typeof draft.comment === 'string' ? draft.comment.slice(0, 500) : '' }
+  } catch {
+    return { rating: null, comment: '' }
   }
 }
 
@@ -134,6 +147,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   const [participantNameDraft, setParticipantNameDraft] = useState(readParticipantNameDraft)
   const [showAbandon, setShowAbandon] = useState(false)
   const [storageError, setStorageError] = useState('')
+  const [feedbackStorageError, setFeedbackStorageError] = useState('')
   const [firebaseSyncState, setFirebaseSyncState] = useState<{ sessionId: string; status: FirebaseUploadStatus } | null>(() => {
     const restored = getRestoredSession()
     return restored ? { sessionId: restored.sessionId, status: firebaseConfigured ? 'uploading' : 'pending' } : null
@@ -163,6 +177,9 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
         setFirebaseSyncState({ sessionId: targetSession.sessionId, status: 'synced' })
       }
     } catch (error) {
+      const details = error instanceof Error ? error.message : String(error)
+      const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : 'unknown'
+      console.error('Firebase 실험 세션 저장 실패', { sessionId: targetSession.sessionId, code, message: details }, error)
       if (requestId === syncRequestRef.current && sessionRef.current?.sessionId === targetSession.sessionId) {
         setFirebaseSyncState({ sessionId: targetSession.sessionId, status: classifyUploadError(error) })
       }
@@ -226,6 +243,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   async function startNew() {
     const participantName = participantNameDraft.trim().slice(0, 20)
     if (!participantName) return
+    feedbackSubmitLock.current = false
     let firebaseOwnerUid: string | undefined
     if (firebaseConfigured) {
       try {
@@ -257,6 +275,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   }
 
   function prepareAnotherSession(participantName: string) {
+    feedbackSubmitLock.current = false
     setParticipantNameDraft(participantName)
     try {
       window.localStorage.setItem(NEW_SESSION_INTENT_KEY, 'true')
@@ -337,18 +356,34 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
 
   function submitFeedback(difficultyRating: 1 | 2 | 3 | 4 | 5 | null, comment: string, skipped: boolean) {
     if (feedbackSubmitLock.current) return
+    const current = sessionRef.current
+    if (!current || current.screen !== 'feedback' || current.feedback) return
     feedbackSubmitLock.current = true
-    setSession((current) => {
-      if (!current || current.screen !== 'feedback' || current.feedback) return current
-      const feedback: ExperimentFeedback = {
-        feedbackId: crypto.randomUUID(),
-        difficultyRating: skipped ? null : difficultyRating,
-        comment: skipped ? '' : comment.trim().slice(0, 500),
-        skipped,
-        submittedAt: new Date().toISOString(),
-      }
-      return { ...current, feedback, screen: 'complete' }
-    })
+    const feedback: ExperimentFeedback = {
+      feedbackId: crypto.randomUUID(),
+      difficultyRating: skipped ? null : difficultyRating,
+      comment: skipped ? '' : comment.trim().slice(0, 500),
+      skipped,
+      submittedAt: new Date().toISOString(),
+    }
+    const completedSession = { ...current, feedback, screen: 'complete' as const }
+    try {
+      // Persist the response synchronously before navigating away; the Firebase effect runs afterward.
+      localExperimentRepository.save(completedSession)
+    } catch (error) {
+      feedbackSubmitLock.current = false
+      console.error('설문 응답을 로컬에 저장하지 못했습니다.', error)
+      setFeedbackStorageError('응답을 이 기기에 저장하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도해 주세요.')
+      return
+    }
+    try {
+      window.localStorage.removeItem(`${FEEDBACK_DRAFT_KEY_PREFIX}${current.sessionId}`)
+    } catch {
+      // The submitted session already contains the authoritative response.
+    }
+    sessionRef.current = completedSession
+    setFeedbackStorageError('')
+    setSession(completedSession)
   }
 
   function contextClick(event: MouseEvent<HTMLDivElement>) {
@@ -548,7 +583,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   }
 
   if (session.screen === 'feedback') {
-    return <ExperimentFrame><FeedbackScreen onSubmit={submitFeedback} /></ExperimentFrame>
+    return <ExperimentFrame><FeedbackScreen sessionId={session.sessionId} error={feedbackStorageError} onSubmit={submitFeedback} /></ExperimentFrame>
   }
 
   if (session.screen === 'complete') {
@@ -614,13 +649,18 @@ export function TaskControls({ taskId, selectedRoomId, onAbandon, onWrongRoom }:
   </div>
 }
 
-function FeedbackScreen({ onSubmit }: { onSubmit: (rating: 1 | 2 | 3 | 4 | 5 | null, comment: string, skipped: boolean) => void }) {
-  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | null>(null)
-  const [comment, setComment] = useState('')
-  const submitLock = useRef(false)
+function FeedbackScreen({ sessionId, error, onSubmit }: { sessionId: string; error: string; onSubmit: (rating: 1 | 2 | 3 | 4 | 5 | null, comment: string, skipped: boolean) => void }) {
+  const [initialDraft] = useState(() => readFeedbackDraft(sessionId))
+  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | null>(initialDraft.rating)
+  const [comment, setComment] = useState(initialDraft.comment)
+  const saveDraft = (nextRating: 1 | 2 | 3 | 4 | 5 | null, nextComment: string) => {
+    try {
+      window.localStorage.setItem(`${FEEDBACK_DRAFT_KEY_PREFIX}${sessionId}`, JSON.stringify({ rating: nextRating, comment: nextComment.slice(0, 500) }))
+    } catch (storageError) {
+      console.error('설문 초안을 로컬에 저장하지 못했습니다.', storageError)
+    }
+  }
   const submit = (skipped: boolean) => {
-    if (submitLock.current) return
-    submitLock.current = true
     onSubmit(rating, comment, skipped)
   }
 
@@ -628,13 +668,14 @@ function FeedbackScreen({ onSubmit }: { onSubmit: (rating: 1 | 2 | 3 | 4 | 5 | n
     <p className="experiment-eyebrow">실험 후 의견 (선택)</p>
     <h1>실험 후 의견</h1>
     <p>응답은 선택 사항이며, 과업 결과에는 영향을 주지 않습니다.</p>
+    {error && <p role="alert" className="experiment-error">{error}</p>}
     <fieldset className="feedback-rating">
       <legend>필요한 정보를 찾는 과정은 전반적으로 어떠셨나요?</legend>
       <div className="feedback-rating-options">
         {(['매우 어려웠다', '어려웠다', '보통이었다', '쉬웠다', '매우 쉬웠다'] as const).map((label, index) => {
           const value = (index + 1) as 1 | 2 | 3 | 4 | 5
           return <label key={value}>
-            <input type="radio" name="difficulty-rating" value={value} checked={rating === value} onChange={() => setRating(value)} />
+            <input type="radio" name="difficulty-rating" value={value} checked={rating === value} onChange={() => { setRating(value); saveDraft(value, comment) }} />
             <span>{value}. {label}</span>
           </label>
         })}
@@ -642,7 +683,7 @@ function FeedbackScreen({ onSubmit }: { onSubmit: (rating: 1 | 2 | 3 | 4 | 5 | n
     </fieldset>
     <label className="feedback-comment">
       <span>정보를 찾으면서 느낀 점이나 개선이 필요하다고 생각한 부분이 있다면 자유롭게 작성해 주세요.</span>
-      <textarea value={comment} onChange={(event) => setComment(event.currentTarget.value.slice(0, 500))} maxLength={500} rows={4} placeholder="특별한 의견이 없다면 비워 두셔도 됩니다." />
+      <textarea value={comment} onChange={(event) => { const nextComment = event.currentTarget.value.slice(0, 500); setComment(nextComment); saveDraft(rating, nextComment) }} maxLength={500} rows={4} placeholder="특별한 의견이 없다면 비워 두셔도 됩니다." />
       <small>{comment.length}/500</small>
     </label>
     <div className="feedback-actions">
