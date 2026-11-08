@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { deriveTask3Exploration, elapsedMilliseconds } from '../src/services/experimentInstrumentation.ts'
 import { createAttempt } from '../src/services/experimentTracker.ts'
 import { acquireExperimentStartLock, getOrCreatePendingSession } from '../src/services/experimentStart.ts'
-import { isCohortRemoteWriteAllowed, resolveExperimentCohort, usesCurrentV3Instrumentation } from '../src/data/experimentCohortPolicy.ts'
+import { isCohortRemoteWriteAllowed, resolveExperimentCohort, usesCurrentInstrumentation } from '../src/data/experimentCohortPolicy.ts'
 
 test('elapsed measurement prefers the monotonic performance clock', () => {
   assert.equal(elapsedMilliseconds(100, '2026-11-06T00:00:00.000Z', 550, 0), 450)
@@ -27,25 +27,27 @@ test('unmonitored and ambiguous scroll histories remain unknown, not false', () 
   assert.deepEqual(deriveTask3Exploration({ scrollUsed: false, scrollTrackingStatus: 'uncertain', scrollOrderUncertain: true }), { scrollUsed: null, explorationStrategy: 'unknown' })
 })
 
-test('only V3 schema 2 initializes new fields; old schema and versions stay unchanged', () => {
-  const attempt = createAttempt('task_1', 'condition-a-v3', 2)
+test('only V4 schema 2 initializes current instrumentation; earlier versions and schemas stay unchanged', () => {
+  const attempt = createAttempt('task_1', 'condition-a-v4', 2)
   assert.equal(attempt.actualResponse.firstTargetRoomOpenAt, null)
   assert.equal(attempt.actualResponse.timeToFirstTargetRoomOpen, null)
   assert.equal(attempt.actualResponse.firstTargetRoomOpenVisitIndex, null)
-  assert.deepEqual(createAttempt('task_1', 'condition-a-v3', 1).actualResponse, {})
+  assert.deepEqual(createAttempt('task_1', 'condition-a-v4', 1).actualResponse, {})
+  assert.deepEqual(createAttempt('task_1', 'condition-a-v3', 2).actualResponse, {})
   assert.deepEqual(createAttempt('task_1', 'condition-a-v2').actualResponse, {})
-  assert.equal(usesCurrentV3Instrumentation({ experimentVersion: 'condition-a-v3', schemaVersion: 2 }), true)
-  assert.equal(usesCurrentV3Instrumentation({ experimentVersion: 'condition-a-v3', schemaVersion: 1 }), false)
+  assert.equal(usesCurrentInstrumentation({ experimentVersion: 'condition-a-v4', schemaVersion: 2 }), true)
+  assert.equal(usesCurrentInstrumentation({ experimentVersion: 'condition-a-v4', schemaVersion: 1 }), false)
+  assert.equal(usesCurrentInstrumentation({ experimentVersion: 'condition-a-v3', schemaVersion: 2 }), false)
 })
 
-test('V3 cohort defaults to QA in development and main in production; QA writes require explicit opt-in', () => {
-  assert.equal(resolveExperimentCohort(undefined, true), 'condition-a-v3-qa')
-  assert.equal(resolveExperimentCohort(undefined, false), 'condition-a-v3-main')
-  assert.equal(resolveExperimentCohort('condition-a-v3-main', true), 'condition-a-v3-main')
-  assert.equal(isCohortRemoteWriteAllowed('condition-a-v3-qa', true, false, true), false)
-  assert.equal(isCohortRemoteWriteAllowed('condition-a-v3-qa', true, true, true), true)
-  assert.equal(isCohortRemoteWriteAllowed('condition-a-v3-main', true, false, true), false)
-  assert.equal(isCohortRemoteWriteAllowed('condition-a-v3-main', true, false, false), true)
+test('V4 cohort defaults to QA in development and main in production; QA writes require explicit opt-in', () => {
+  assert.equal(resolveExperimentCohort(undefined, true), 'condition-a-v4-qa')
+  assert.equal(resolveExperimentCohort(undefined, false), 'condition-a-v4-main')
+  assert.equal(resolveExperimentCohort('condition-a-v4-main', true), 'condition-a-v4-main')
+  assert.equal(isCohortRemoteWriteAllowed('condition-a-v4-qa', true, false, true), false)
+  assert.equal(isCohortRemoteWriteAllowed('condition-a-v4-qa', true, true, true), true)
+  assert.equal(isCohortRemoteWriteAllowed('condition-a-v4-main', true, false, true), false)
+  assert.equal(isCohortRemoteWriteAllowed('condition-a-v4-main', true, false, false), true)
   assert.equal(isCohortRemoteWriteAllowed(undefined, true, false, true), false)
 })
 

@@ -1,13 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { chatRooms } from '../data/chatRooms'
-import { conversations, type ConversationMessage } from '../data/conversations'
+import { conversations } from '../data/conversations'
+import { searchMessages, type SearchMessageHit } from '../data/searchMessages'
 
-export type SearchHit = {
-  roomId: string
-  roomName: string
-  message: ConversationMessage
-  dateLabel?: string
-}
+export type SearchHit = SearchMessageHit
 
 function SearchGlyph() {
   return <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="13.5" cy="13.5" r="9.5" /><path d="m21 21 7 7" /></svg>
@@ -37,21 +33,13 @@ function highlight(text: string, query: string) {
   return <>{text.slice(0, match)}<mark>{text.slice(match, match + query.length)}</mark>{text.slice(match + query.length)}</>
 }
 
-export function SearchView({ onCancel, onSelect, onQueryChange, onSearchSubmit, rooms = chatRooms, conversationData = conversations }: { onCancel: () => void; onSelect: (hit: SearchHit) => void; onQueryChange: (query: string) => void; onSearchSubmit?: (query: string) => void; rooms?: typeof chatRooms; conversationData?: typeof conversations }) {
+export function SearchView({ onCancel, onSelect, onQueryChange, onSearchSubmit, rooms = chatRooms, conversationData = conversations, roomId }: { onCancel: () => void; onSelect: (hit: SearchHit) => void; onQueryChange: (query: string) => void; onSearchSubmit?: (query: string) => void; rooms?: typeof chatRooms; conversationData?: typeof conversations; roomId?: string }) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const results = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
-    if (!needle) return []
-    return rooms.flatMap((room) => {
-      const conversation = conversationData[room.id]
-      if (!conversation) return []
-      return conversation.messages
-        .filter((message) => !message.isSystem && message.text.toLocaleLowerCase().includes(needle))
-        .map((message) => ({ roomId: room.id, roomName: room.name, message, dateLabel: conversation.dateLabel }))
-    })
-  }, [query, rooms, conversationData])
+    return searchMessages(query, rooms, conversationData, roomId)
+  }, [query, rooms, conversationData, roomId])
   const safeIndex = results.length ? activeIndex % results.length : 0
 
   useEffect(() => {

@@ -3,11 +3,11 @@ import { experimentTaskOrder, getTaskConversation, getTaskExpectedResponse, task
 import { getSeoulDate } from '../data/experimentDates'
 import { localExperimentRepository } from '../data/experimentRepository'
 import { canUploadSessionToFirebase, CURRENT_EXPERIMENT_COHORT_ID } from '../data/experimentCohort'
-import { usesCurrentV3Instrumentation } from '../data/experimentCohortPolicy'
+import { usesCurrentInstrumentation } from '../data/experimentCohortPolicy'
 import { acquireExperimentStartLock, getOrCreatePendingSession } from '../services/experimentStart'
 import { beginAnonymousParticipant, firebaseConfigured, getAnonymousUser } from '../data/firebaseClient'
 import { firebaseExperimentRepository } from '../data/firebaseExperimentRepository'
-import { CURRENT_EXPERIMENT_VERSION, VERSION_3_SCHEMA_VERSION, type ExperimentFeedback, type ExperimentSession, type ExperimentTaskId, type ExperimentTaskResult, type ExperimentScreen } from '../data/experimentTypes'
+import { CURRENT_EXPERIMENT_VERSION, CURRENT_EXPERIMENT_SCHEMA_VERSION, type ExperimentFeedback, type ExperimentSession, type ExperimentTaskId, type ExperimentTaskResult, type ExperimentScreen } from '../data/experimentTypes'
 import { createAttempt, csvEscape, finishAttempt } from '../services/experimentTracker'
 import { deriveTask3Exploration, elapsedMilliseconds } from '../services/experimentInstrumentation'
 import type { RegisteredItem } from '../data/registeredItems'
@@ -105,7 +105,7 @@ function newSession(participantName: string, cohortId: ExperimentSession['cohort
   const nextParticipantNumber = Math.max(0, ...participantNumbers) + 1
   const participantId = `P${String(nextParticipantNumber).padStart(3, '0')}`
   return {
-    schemaVersion: VERSION_3_SCHEMA_VERSION,
+    schemaVersion: CURRENT_EXPERIMENT_SCHEMA_VERSION,
     experimentVersion: CURRENT_EXPERIMENT_VERSION,
     cohortId,
     participantId,
@@ -350,7 +350,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
       if (!current?.currentAttempt || current.currentAttempt.completionStatus !== 'inProgress') return current
       const attempt = current.currentAttempt
       const actualResponse = { ...attempt.actualResponse, ...extra }
-      if (usesCurrentV3Instrumentation(current) && attempt.taskId === 'task_2') {
+      if (usesCurrentInstrumentation(current) && attempt.taskId === 'task_2') {
         const firstCalendarOpenAt = actualResponse.firstCalendarOpenAt
         if (typeof firstCalendarOpenAt === 'string') {
           const clock = calendarClockRef.current
@@ -359,7 +359,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
           actualResponse.timeAfterCalendarOpen = null
         }
       }
-      if (usesCurrentV3Instrumentation(current) && attempt.taskId === 'task_3') {
+      if (usesCurrentInstrumentation(current) && attempt.taskId === 'task_3') {
         Object.assign(actualResponse, deriveTask3Exploration(actualResponse))
       }
       const taskResult = finishAttempt({ ...attempt, actualResponse }, status, success, accuracy)
@@ -548,7 +548,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   }
 
   function recordTask2CalendarOpen(path: 'plus' | 'drawer', from: 'chat' | 'drawer') {
-    if (!sessionRef.current || !usesCurrentV3Instrumentation(sessionRef.current)) return
+    if (!sessionRef.current || !usesCurrentInstrumentation(sessionRef.current)) return
     updateAttempt((attempt) => {
       if (attempt.taskId !== 'task_2') return attempt
       const previousEvents = Array.isArray(attempt.actualResponse.interactionEvents) ? attempt.actualResponse.interactionEvents as Array<Record<string, unknown>> : []
@@ -573,7 +573,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   }
 
   function recordTask2CalendarReturn(path: 'plus' | 'drawer', to: 'chat' | 'drawer') {
-    if (!sessionRef.current || !usesCurrentV3Instrumentation(sessionRef.current)) return
+    if (!sessionRef.current || !usesCurrentInstrumentation(sessionRef.current)) return
     updateAttempt((attempt) => {
       if (attempt.taskId !== 'task_2') return attempt
       const events = Array.isArray(attempt.actualResponse.interactionEvents) ? attempt.actualResponse.interactionEvents as Array<Record<string, unknown>> : []
@@ -588,7 +588,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   }
 
   function markTask3ScrollTrackingReady() {
-    if (!sessionRef.current || !usesCurrentV3Instrumentation(sessionRef.current)) return
+    if (!sessionRef.current || !usesCurrentInstrumentation(sessionRef.current)) return
     updateAttempt((attempt) => {
       if (attempt.taskId !== 'task_3' || attempt.actualResponse.scrollTrackingStatus === 'uncertain') return attempt
       const actualResponse: Record<string, unknown> = { ...attempt.actualResponse, scrollTrackingStatus: 'monitored' }
@@ -599,7 +599,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
   }
 
   function recordTask3Scroll(assessment: 'user' | 'uncertain') {
-    if (!sessionRef.current || !usesCurrentV3Instrumentation(sessionRef.current)) return
+    if (!sessionRef.current || !usesCurrentInstrumentation(sessionRef.current)) return
     updateAttempt((attempt) => {
       if (attempt.taskId !== 'task_3') return attempt
       const response = attempt.actualResponse
@@ -631,7 +631,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
     visitRoom: (roomId) => updateAttempt((attempt) => {
       const visitedRooms = [...attempt.visitedRooms, roomId]
       const response = attempt.actualResponse
-      const isFirstTargetOpen = usesCurrentV3Instrumentation(session)
+      const isFirstTargetOpen = usesCurrentInstrumentation(session)
         && attempt.taskId === 'task_1'
         && roomId === 'room_1'
         && typeof response.firstTargetRoomOpenAt !== 'string'
@@ -678,7 +678,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
         searchQueries: [...attempt.searchQueries, value],
         actualResponse: {
           ...attempt.actualResponse,
-          ...(usesCurrentV3Instrumentation(session) && attempt.taskId === 'task_3' && typeof attempt.actualResponse.firstSearchAt !== 'string' ? { firstSearchAt: new Date().toISOString() } : {}),
+          ...(usesCurrentInstrumentation(session) && attempt.taskId === 'task_3' && typeof attempt.actualResponse.firstSearchAt !== 'string' ? { firstSearchAt: new Date().toISOString() } : {}),
           interactionEvents: [...(Array.isArray(attempt.actualResponse.interactionEvents) ? attempt.actualResponse.interactionEvents : []), { eventId: crypto.randomUUID(), eventType: 'searchQuery', occurredAt: new Date().toISOString(), taskId: attempt.taskId, taskAttemptId: attempt.taskAttemptId, query: value }],
         },
       }))
@@ -743,7 +743,7 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
         />
       </label>
       {storageError && <p role="alert" className="experiment-error">{storageError}</p>}
-      {CURRENT_EXPERIMENT_COHORT_ID === 'condition-a-v3-qa'
+      {CURRENT_EXPERIMENT_COHORT_ID === 'condition-a-v4-qa'
         ? <p className="experiment-cloud-note">QA 테스트 · 기본 설정에서는 이 기기에만 저장됩니다.</p>
         : !firebaseConfigured && <p className="experiment-cloud-note">Firebase 설정 대기 중 · 현재 기기에만 저장됩니다.</p>}
       <button type="submit" className="experiment-primary" disabled={!participantNameDraft.trim() || isStarting}>{isStarting ? '실험을 시작하고 있습니다…' : '실험 시작'}</button>
@@ -780,9 +780,9 @@ export function ExperimentFlow({ children }: { children: ReactNode }) {
     const uploadStatus = firebaseSyncState?.sessionId === finishedSession.sessionId
       ? firebaseSyncState.status
       : sessionCanUpload ? 'uploading' : 'pending'
-    const uploadMessage = finishedSession.cohortId === 'condition-a-v3-qa' && !canUploadSessionToFirebase(finishedSession)
+    const uploadMessage = finishedSession.cohortId === 'condition-a-v4-qa' && !canUploadSessionToFirebase(finishedSession)
       ? 'QA 세션은 Firebase로 전송하지 않습니다. 이 기기에만 저장했습니다.'
-      : firebaseConfigured && finishedSession.cohortId === 'condition-a-v3-main' && import.meta.env.DEV
+      : firebaseConfigured && finishedSession.cohortId === 'condition-a-v4-main' && import.meta.env.DEV
       ? '개발 환경의 본실험 코호트는 Firebase로 전송하지 않습니다. 이 기기에만 저장했습니다.'
       : !sessionCanUpload
       ? firebaseConfigured

@@ -1,4 +1,4 @@
-import { CURRENT_EXPERIMENT_VERSION, VERSION_3_SCHEMA_VERSION, type ExperimentCohortId, type ExperimentSession } from './experimentTypes'
+import { CURRENT_EXPERIMENT_VERSION, CURRENT_EXPERIMENT_SCHEMA_VERSION, type ExperimentCohortId, type ExperimentSession } from './experimentTypes'
 import { isCohortRemoteWriteAllowed, resolveExperimentCohort } from './experimentCohortPolicy'
 
 export const CURRENT_EXPERIMENT_COHORT_ID = resolveExperimentCohort(import.meta.env.VITE_EXPERIMENT_COHORT_ID, import.meta.env.DEV)
@@ -14,6 +14,6 @@ export function canUploadCohortToFirebase(cohortId: ExperimentCohortId | undefin
 
 export function canUploadSessionToFirebase(session: Pick<ExperimentSession, 'experimentVersion' | 'schemaVersion' | 'cohortId'>) {
   return session.experimentVersion === CURRENT_EXPERIMENT_VERSION
-    && session.schemaVersion === VERSION_3_SCHEMA_VERSION
+    && session.schemaVersion === CURRENT_EXPERIMENT_SCHEMA_VERSION
     && canUploadCohortToFirebase(session.cohortId)
 }

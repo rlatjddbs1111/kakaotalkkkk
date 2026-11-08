@@ -343,7 +343,7 @@ function ChatApplication() {
           <span className="home-indicator" />
         </div>
         {selectedRoom && !isDrawerOpen && !isNoticeOpen && isAddMenuOpen && <MessageAddMenu onClose={() => setIsAddMenuOpen(false)} onOpenRegistration={() => { setRegistrationPath('plus'); setRegistrationInitialKind(taskId === 'task_2' ? 'schedule' : null); setIsAddMenuOpen(false); setIsRegistrationOpen(true) }} />}
-        {selectedRoom && !isDrawerOpen && !isNoticeOpen && isSearchOpen && <SearchView rooms={experimentRooms} conversationData={conversationMap} onCancel={() => { setIsSearchOpen(false); setSearchTerm('') }} onQueryChange={setSearchTerm} onSearchSubmit={experiment.recordSearchQuery} onSelect={openSearchHit} />}
+        {selectedRoom && !isDrawerOpen && !isNoticeOpen && isSearchOpen && <SearchView rooms={experimentRooms} conversationData={conversationMap} roomId={selectedRoom.id} onCancel={() => { setIsSearchOpen(false); setSearchTerm('') }} onQueryChange={setSearchTerm} onSearchSubmit={experiment.recordSearchQuery} onSelect={openSearchHit} />}
         {selectedRoom && !isDrawerOpen && isNoticeOpen && <NoticeDetailView room={selectedRoom} onBack={() => setIsNoticeOpen(false)} />}
         {selectedRoom && isRegistrationOpen && <RegistrationFlow roomId={taskId === 'task_2' ? scopedRegistrationRoomId ?? selectedRoom.id : selectedRoom.id} initialKind={registrationInitialKind} onOpen={() => { if (taskId === 'task_2') experiment.recordTask2CalendarOpen(registrationPath, isDrawerOpen ? 'drawer' : 'chat') }} onClose={() => { if (taskId === 'task_2') experiment.recordTask2CalendarReturn(registrationPath, isDrawerOpen ? 'drawer' : 'chat'); setIsRegistrationOpen(false); setRegistrationInitialKind(null) }} onSave={saveRegisteredItem} />}
       </div>

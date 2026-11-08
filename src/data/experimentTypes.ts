@@ -1,7 +1,7 @@
 export type ExperimentCondition = 'A'
-export const CURRENT_EXPERIMENT_VERSION = 'condition-a-v3'
-export const VERSION_3_SCHEMA_VERSION = 2 as const
-export type ExperimentCohortId = 'condition-a-v3-main' | 'condition-a-v3-qa'
+export const CURRENT_EXPERIMENT_VERSION = 'condition-a-v4'
+export const CURRENT_EXPERIMENT_SCHEMA_VERSION = 2 as const
+export type ExperimentCohortId = 'condition-a-v4-main' | 'condition-a-v4-qa'
 export type ExperimentTaskId = 'task_1' | 'task_2' | 'task_3'
 export type ExperimentScreen = 'overview' | 'taskInstruction' | 'taskActive' | 'feedback' | 'complete'
 export type CompletionStatus = 'inProgress' | 'success' | 'failure' | 'abandoned' | 'timeout'

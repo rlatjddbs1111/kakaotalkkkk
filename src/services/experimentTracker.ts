@@ -1,4 +1,4 @@
-import { CURRENT_EXPERIMENT_VERSION, VERSION_3_SCHEMA_VERSION, type ExperimentTaskId, type ExperimentTaskResult } from '../data/experimentTypes.ts'
+import { CURRENT_EXPERIMENT_VERSION, CURRENT_EXPERIMENT_SCHEMA_VERSION, type ExperimentTaskId, type ExperimentTaskResult } from '../data/experimentTypes.ts'
 
 export function createAttempt(taskId: ExperimentTaskId, experimentVersion?: string, schemaVersion?: number): ExperimentTaskResult {
   return {
@@ -14,7 +14,7 @@ export function createAttempt(taskId: ExperimentTaskId, experimentVersion?: stri
     visitedRooms: [],
     answerAccuracy: null,
     searchQueries: [],
-    actualResponse: experimentVersion === CURRENT_EXPERIMENT_VERSION && schemaVersion === VERSION_3_SCHEMA_VERSION
+    actualResponse: experimentVersion === CURRENT_EXPERIMENT_VERSION && schemaVersion === CURRENT_EXPERIMENT_SCHEMA_VERSION
       ? taskId === 'task_2'
         ? {
             interactionEvents: [],
