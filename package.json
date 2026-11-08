@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test:experiment-dates": "node --experimental-strip-types --test scripts/experiment-dates.test.mjs"
+    "test:experiment-dates": "node --experimental-strip-types --test scripts/experiment-dates.test.mjs",
+    "test:instrumentation": "node --experimental-strip-types --test scripts/experiment-instrumentation.test.mjs"
   },
   "dependencies": {
     "firebase": "^13.2.0",

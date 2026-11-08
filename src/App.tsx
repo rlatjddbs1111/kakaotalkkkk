@@ -269,6 +269,7 @@ function ChatApplication() {
       }
       writeRegisteredItems([...registeredItems.filter((existing) => existing.id !== scopedItem.id), scopedItem])
       setRegisteredItems((current) => current.some((existing) => existing.id === scopedItem.id) ? current : [...current, scopedItem])
+      experiment.recordTask2CalendarReturn(registrationPath, isDrawerOpen ? 'drawer' : 'chat')
       experiment.completeTask2Schedule(scopedItem, registrationPath)
       setIsRegistrationOpen(false)
       setRegistrationInitialKind(null)
@@ -329,6 +330,8 @@ function ChatApplication() {
               targetQuery={targetQuery}
               conversationOverride={conversationMap[selectedRoom.id]}
               participantName={session.participantName}
+              onScrollTrackingReady={taskId === 'task_3' ? experiment.markTask3ScrollTrackingReady : undefined}
+              onScrollAssessment={taskId === 'task_3' ? experiment.recordTask3Scroll : undefined}
             />
           ) : (
             <ChatList rooms={experimentRooms} onOpenRoom={(room) => { experiment.visitRoom(room.id); setSelectedRoom(room) }} />
@@ -342,7 +345,7 @@ function ChatApplication() {
         {selectedRoom && !isDrawerOpen && !isNoticeOpen && isAddMenuOpen && <MessageAddMenu onClose={() => setIsAddMenuOpen(false)} onOpenRegistration={() => { setRegistrationPath('plus'); setRegistrationInitialKind(taskId === 'task_2' ? 'schedule' : null); setIsAddMenuOpen(false); setIsRegistrationOpen(true) }} />}
         {selectedRoom && !isDrawerOpen && !isNoticeOpen && isSearchOpen && <SearchView rooms={experimentRooms} conversationData={conversationMap} onCancel={() => { setIsSearchOpen(false); setSearchTerm('') }} onQueryChange={setSearchTerm} onSearchSubmit={experiment.recordSearchQuery} onSelect={openSearchHit} />}
         {selectedRoom && !isDrawerOpen && isNoticeOpen && <NoticeDetailView room={selectedRoom} onBack={() => setIsNoticeOpen(false)} />}
-        {selectedRoom && isRegistrationOpen && <RegistrationFlow roomId={taskId === 'task_2' ? scopedRegistrationRoomId ?? selectedRoom.id : selectedRoom.id} initialKind={registrationInitialKind} onClose={() => { setIsRegistrationOpen(false); setRegistrationInitialKind(null) }} onSave={saveRegisteredItem} />}
+        {selectedRoom && isRegistrationOpen && <RegistrationFlow roomId={taskId === 'task_2' ? scopedRegistrationRoomId ?? selectedRoom.id : selectedRoom.id} initialKind={registrationInitialKind} onOpen={() => { if (taskId === 'task_2') experiment.recordTask2CalendarOpen(registrationPath, isDrawerOpen ? 'drawer' : 'chat') }} onClose={() => { if (taskId === 'task_2') experiment.recordTask2CalendarReturn(registrationPath, isDrawerOpen ? 'drawer' : 'chat'); setIsRegistrationOpen(false); setRegistrationInitialKind(null) }} onSave={saveRegisteredItem} />}
       </div>
     </main>
   )

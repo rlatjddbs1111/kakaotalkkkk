@@ -110,6 +110,8 @@ export function ChatRoomView({
   targetQuery,
   conversationOverride,
   participantName,
+  onScrollTrackingReady,
+  onScrollAssessment,
 }: {
   room: ChatRoomListItem
   unreadTotal: number
@@ -121,6 +123,8 @@ export function ChatRoomView({
   targetQuery?: string
   conversationOverride?: Conversation
   participantName?: string
+  onScrollTrackingReady?: () => void
+  onScrollAssessment?: (assessment: 'user' | 'uncertain') => void
 }) {
   const sourceConversation = conversationOverride ?? conversations[room.id] ?? { messages: [] }
   const conversation = participantName ? {
@@ -131,13 +135,25 @@ export function ChatRoomView({
   } : sourceConversation
   const timelineRef = useRef<HTMLDivElement>(null)
   const followsLatestRef = useRef(true)
+  const lastScrollTopRef = useRef<number | null>(null)
+  const userScrollIntentUntilRef = useRef(0)
+  const programmaticScrollUntilRef = useRef(0)
+  const touchStartYRef = useRef<number | null>(null)
+  const confirmedUserScrollRef = useRef(false)
+  const readyCallbackRef = useRef(onScrollTrackingReady)
+  readyCallbackRef.current = onScrollTrackingReady
   const [isNoticeVisible, setIsNoticeVisible] = useState(true)
 
   useEffect(() => setIsNoticeVisible(true), [room.id])
 
+  useEffect(() => {
+    if (onScrollAssessment) readyCallbackRef.current?.()
+  }, [room.id, Boolean(onScrollAssessment)])
+
   useLayoutEffect(() => {
     const timeline = timelineRef.current
     if (!timeline) return
+    programmaticScrollUntilRef.current = performance.now() + 350
     if (targetMessageNumber) {
       const target = timeline.querySelector<HTMLElement>(`[data-message-number="${targetMessageNumber}"]`)
       if (target) target.scrollIntoView({ block: 'center', behavior: 'instant' })
@@ -160,7 +176,34 @@ export function ChatRoomView({
       )}
       <div className="chat-timeline" ref={timelineRef} aria-label={`${room.name} 대화`} onScroll={(event) => {
         const timeline = event.currentTarget
+        const previousScrollTop = lastScrollTopRef.current
+        lastScrollTopRef.current = timeline.scrollTop
         followsLatestRef.current = timeline.scrollHeight - timeline.scrollTop - timeline.clientHeight < 36
+        if (previousScrollTop === null || !onScrollAssessment || Math.abs(timeline.scrollTop - previousScrollTop) < 4) return
+        const now = performance.now()
+        if (now <= programmaticScrollUntilRef.current) {
+          if (now <= userScrollIntentUntilRef.current) onScrollAssessment('uncertain')
+          return
+        }
+        if (now <= userScrollIntentUntilRef.current) {
+          confirmedUserScrollRef.current = true
+          onScrollAssessment('user')
+        } else if (!confirmedUserScrollRef.current) {
+          onScrollAssessment('uncertain')
+        }
+      }} onWheel={() => {
+        userScrollIntentUntilRef.current = performance.now() + 2000
+      }} onTouchStart={(event) => {
+        touchStartYRef.current = event.touches[0]?.clientY ?? null
+      }} onTouchMove={(event) => {
+        const currentY = event.touches[0]?.clientY
+        if (currentY !== undefined && touchStartYRef.current !== null && Math.abs(currentY - touchStartYRef.current) >= 8) {
+          userScrollIntentUntilRef.current = performance.now() + 2500
+        }
+      }} onPointerDown={(event) => {
+        if (event.pointerType === 'mouse' || event.pointerType === 'pen') userScrollIntentUntilRef.current = performance.now() + 1200
+      }} onKeyDown={(event) => {
+        if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) userScrollIntentUntilRef.current = performance.now() + 1200
       }}>
         {conversation.dateLabel && <div className="chat-date-divider"><span>{conversation.dateLabel}</span></div>}
         {conversation.messages.map((message, index) => {

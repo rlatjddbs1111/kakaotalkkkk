@@ -4,7 +4,7 @@ import { firebaseConfigured, firestore, getAnonymousUser } from './firebaseClien
 
 type InteractionEvent = {
   eventId: string
-  eventType: 'click' | 'searchQuery' | 'searchResultSelected' | 'taskHintToggle'
+  eventType: 'click' | 'searchQuery' | 'searchResultSelected' | 'taskHintToggle' | 'task1TargetRoomOpened' | 'task2CalendarOpen' | 'task2CalendarReturn' | 'task3UserScroll'
   occurredAt: string
   [key: string]: unknown
 }

@@ -1,6 +1,6 @@
-import type { ExperimentTaskId, ExperimentTaskResult } from '../data/experimentTypes'
+import { CURRENT_EXPERIMENT_VERSION, VERSION_3_SCHEMA_VERSION, type ExperimentTaskId, type ExperimentTaskResult } from '../data/experimentTypes.ts'
 
-export function createAttempt(taskId: ExperimentTaskId): ExperimentTaskResult {
+export function createAttempt(taskId: ExperimentTaskId, experimentVersion?: string, schemaVersion?: number): ExperimentTaskResult {
   return {
     taskId,
     taskAttemptId: crypto.randomUUID(),
@@ -14,7 +14,36 @@ export function createAttempt(taskId: ExperimentTaskId): ExperimentTaskResult {
     visitedRooms: [],
     answerAccuracy: null,
     searchQueries: [],
-    actualResponse: {},
+    actualResponse: experimentVersion === CURRENT_EXPERIMENT_VERSION && schemaVersion === VERSION_3_SCHEMA_VERSION
+      ? taskId === 'task_2'
+        ? {
+            interactionEvents: [],
+            task2ScheduleSubmissions: [],
+            firstCalendarOpenAt: null,
+            firstCalendarOpenPath: null,
+            timeToCalendarOpen: null,
+            timeAfterCalendarOpen: null,
+          }
+        : taskId === 'task_3'
+          ? {
+              interactionEvents: [],
+              task3AnswerSubmissions: [],
+              scrollUsed: null,
+              firstScrollAt: null,
+              firstSearchAt: null,
+              explorationStrategy: 'unknown',
+              scrollTrackingStatus: 'unknown',
+              scrollOrderUncertain: false,
+            }
+          : taskId === 'task_1'
+            ? {
+                interactionEvents: [],
+                firstTargetRoomOpenAt: null,
+                timeToFirstTargetRoomOpen: null,
+                firstTargetRoomOpenVisitIndex: null,
+              }
+            : {}
+      : {},
   }
 }
 

@@ -5,8 +5,18 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Collection-group queries require a version-2 recursive match. This grants
+    // reads only to signed-in accounts carrying a server-issued admin claim.
+    match /{path=**}/sessions/{sessionId} {
+      allow read: if isAdmin();
+    }
+
     match /participants/{uid}/sessions/{sessionId} {
-      allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+      allow read: if (isOwner(uid) && resource.data.ownerUid == uid) || isAdmin();
       allow create: if isOwner(uid) && request.resource.data.ownerUid == uid;
       allow update: if isOwner(uid)
         && resource.data.ownerUid == uid
@@ -14,7 +24,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /taskResults/{taskAttemptId} {
-        allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+        allow read: if (isOwner(uid) && resource.data.ownerUid == uid) || isAdmin();
         allow create: if isOwner(uid) && request.resource.data.ownerUid == uid;
         allow update: if isOwner(uid)
           && resource.data.ownerUid == uid
@@ -23,7 +33,7 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
-        allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+        allow read: if (isOwner(uid) && resource.data.ownerUid == uid) || isAdmin();
         allow create: if isOwner(uid) && request.resource.data.ownerUid == uid;
         allow update: if isOwner(uid)
           && resource.data.ownerUid == uid
@@ -32,7 +42,7 @@ service cloud.firestore {
       }
 
       match /feedback/{feedbackId} {
-        allow read: if isOwner(uid) && resource.data.ownerUid == uid;
+        allow read: if (isOwner(uid) && resource.data.ownerUid == uid) || isAdmin();
         allow create: if isOwner(uid)
           && request.resource.data.ownerUid == uid
           && request.resource.data.sessionId == sessionId

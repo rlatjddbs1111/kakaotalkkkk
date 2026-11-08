@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { dueDateTimeIso, type RegisteredItem, type RegisteredSchedule, type RegisteredTodo } from '../data/registeredItems'
 
 type RegistrationKind = RegisteredItem['kind']
@@ -51,14 +51,24 @@ function scheduleEndAfterOneHour(date: string, time: string) {
   }
 }
 
-export function RegistrationFlow({ roomId, initialKind, initialDate, onClose, onSave }: {
+export function RegistrationFlow({ roomId, initialKind, initialDate, onClose, onSave, onOpen }: {
   roomId: string
   initialKind?: RegistrationKind | null
   initialDate?: string
   onClose: () => void
   onSave: (item: RegisteredItem) => boolean | void
+  onOpen?: () => void
 }) {
+  const onOpenRef = useRef(onOpen)
+  const didRecordOpenRef = useRef(false)
+  onOpenRef.current = onOpen
   const [kind, setKind] = useState<RegistrationKind | null>(initialKind ?? null)
+
+  useEffect(() => {
+    if (didRecordOpenRef.current) return
+    didRecordOpenRef.current = true
+    onOpenRef.current?.()
+  }, [])
 
   return (
     <div className="registration-overlay" role="presentation">
